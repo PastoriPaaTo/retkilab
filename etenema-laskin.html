@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Etenemä‑laskin v1 – kuntoprofiilista km/päivä & viikko</title>
+  <style>
+    :root{--bg:#0b0d10;--card:#12161b;--ink:#e9edf1;--muted:#9fb0c0;--accent:#4fd1c5;--bad:#ff6b6b}
+    *{box-sizing:border-box}body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto;background:var(--bg);color:var(--ink)}
+    header{padding:14px 18px;border-bottom:1px solid #1f2937;background:#0b0d10;position:sticky;top:0}
+    h1{font-size:18px;margin:0}
+    main{padding:18px;max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1.15fr .85fr;gap:16px}
+    @media (max-width:1024px){main{grid-template-columns:1fr}}
+    .card{background:var(--card);border:1px solid #1f2937;border-radius:14px;padding:14px}
+    .section-title{font-size:13px;text-transform:uppercase;color:var(--muted);letter-spacing:.12em;margin:8px 0}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+    input,select{width:100%;background:#0e1217;color:#e9edf1;border:1px solid #293241;border-radius:10px;padding:9px 10px;font-size:14px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .btn{background:#4fd1c5;color:#0b0d10;border:none;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+    .btn.secondary{background:#243141;color:#e9edf1;border:1px solid #334155}
+    .muted{color:#9fb0c0;font-size:12px}
+    .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+    .kpi>div{background:#0f1320;border:1px solid #1f2a3c;border-radius:12px;padding:12px}
+    .kpi .label{color:#9fb0c0;font-size:12px}
+    .kpi .value{font-size:18px;font-weight:800}
+    .pill{display:inline-block;background:#0f172a;border:1px solid #233147;padding:6px 10px;border-radius:999px;margin:4px 6px 0 0;font-size:13px}
+  </style>
+</head>
+<body>
+  <header><h1>Etenemä‑laskin v1 – kuntoprofiilista km/päivä & viikko (50/10 + yksi 30 min)</h1></header>
+  <main>
+    <section class="card">
+      <div class="section-title">1) Kuntoprofiili</div>
+      <div class="grid-4">
+        <div><label>Paino (kg)</label><input id="weight" type="text" value="85"></div>
+        <div><label>Pituus (cm)</label><input id="height" type="text" value="178"></div>
+        <div><label>Ikä</label><input id="age" type="text" value="40"></div>
+        <div><label>Sukupuoli</label>
+          <select id="sex"><option value="m" selected>Mies</option><option value="f">Nainen</option><option value="o">Muu</option></select>
+        </div>
+        <div><label>Leposyke HRrest (bpm)</label><input id="hrRest" type="text" value="55"></div>
+        <div><label>Maksimisykearvio HRmax (bpm)</label><input id="hrMax" type="text" placeholder="oletus 220−ikä"></div>
+        <div><label>Treenitausta</label>
+          <select id="train"><option value="low">Vähäinen</option><option value="rec" selected>Kohtalainen</option><option value="good">Hyvä</option><option value="end">Kestävyys</option></select>
+        </div>
+        <div><label>Vaellustausta</label>
+          <select id="hikeExp"><option value="low">Vähäinen</option><option value="mid" selected>Kohtalainen</option><option value="high">Suuri</option></select>
+        </div>
+        <div><label>Tasamaan oma vauhti (km/h)</label><input id="ownFlat" type="text" value="5.0"></div>
+        <div><label>Tuntemus 5 km jälkeen</label>
+          <select id="feel"><option value="tired">Voipunut</option><option value="ok" selected>Normaali</option><option value="fresh">Energinen</option></select>
+        </div>
+        <div><label>Keskustelutesti kävellessä</label>
+          <select id="talk"><option value="easy" selected>Keskustelu sujuu</option><option value="some">Katkonainen</option><option value="hard">Ei juuri pysty</option></select>
+        </div>
+        <div><label>Kalibrointi (±%)</label>
+          <input id="cal" type="range" min="-15" max="15" value="0" oninput="calLbl.textContent=this.value+'%'">
+          <div class="muted">Kalibrointi: <span id="calLbl">0%</span></div>
+        </div>
+      </div>
+
+      <div class="section-title">2) Olosuhteet</div>
+      <div class="grid-4">
+        <div><label>Rinkan paino (kg)</label><input id="pack" type="text" value="10"></div>
+        <div><label>Maasto</label>
+          <select id="terrain">
+            <option value="1.0">Tie (η 1.0)</option>
+            <option value="1.1" selected>Kovapolku (η 1.1)</option>
+            <option value="1.2">Ruoho/humus (η 1.2)</option>
+            <option value="1.3">Kivikko (η 1.3)</option>
+            <option value="1.5">Tiheä metsä (η 1.5)</option>
+            <option value="1.6">Kova lumi (η 1.6)</option>
+            <option value="1.8">Suo (η 1.8)</option>
+            <option value="2.1">Hiekka (η 2.1)</option>
+          </select>
+        </div>
+        <div><label>Päivän nousu (m)</label><input id="ascent" type="text" value="600"></div>
+        <div><label>Lämpötila (°C)</label><input id="tempC" type="text" value="10"></div>
+        <div><label>Tuuli (m/s)</label><input id="wind" type="text" value="4"></div>
+        <div><label>Altistus</label>
+          <select id="exposure"><option value="open" selected>Avoin</option><option value="forest">Metsä</option></select>
+        </div>
+        <div><label>Sade</label>
+          <select id="precip"><option value="dry" selected>Kuiva</option><option value="drizzle">Tihku</option><option value="rain">Sade</option></select>
+        </div>
+      </div>
+
+      <div class="section-title">3) Päivärytmi</div>
+      <div class="grid-2">
+        <div><label>Syklejä (50 min liike + 10 min tauko)</label><input id="cycles" type="text" value="8"></div>
+        <div><label>Yksi pidempi tauko (min)</label><input id="longBreak" type="text" value="30"></div>
+      </div>
+      <div class="muted">Liikeaika = 50×syklit (min). Oletuksena 8×(50+10) + yksi 30 min → liike 6 h 40 min, kesto päiviä ~8 h 20 min.</div>
+
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="calc">Laske etenemä</button>
+        <button class="btn secondary" id="preset1">Preset: Polku + kohtuukuorma</button>
+        <button class="btn secondary" id="preset2">Preset: Kivikko + raskas</button>
+        <button class="btn secondary" id="preset3">Preset: Suo + lämmin</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">Tulos</div>
+      <div class="kpi">
+        <div><div class="label">Tavoite MET (päivä)</div><div class="value" id="metTarget">-</div></div>
+        <div><div class="label">Sustained‑vauhti</div><div class="value" id="vSust">-</div></div>
+        <div><div class="label">Päivän etenemä</div><div class="value" id="kmDay">-</div></div>
+      </div>
+      <div class="kpi">
+        <div><div class="label">Viikon etenemä</div><div class="value" id="kmWeek">-</div></div>
+        <div><div class="label">Maksimi rinkka tavoite‑km:lle</div><div class="value" id="maxPack">-</div></div>
+        <div><div class="label">−2 kg rinkasta → km/pv</div><div class="value" id="delta2kg">-</div></div>
+      </div>
+      <div class="section-title">Selite</div>
+      <div id="explain" class="muted">-</div>
+    </section>
+  </main>
+
+  <script>
+    const gi=(id)=>document.getElementById(id);
+    const num=(v,def=0)=>{const s=String(v??'').trim().replace(/\s+/g,'').replace('−','-').replace(',','.');const x=parseFloat(s);return Number.isFinite(x)?x:def};
+    const clamp=(v,mi,ma)=>Math.min(ma,Math.max(mi,v));
+
+    // Pandolf–Santee (W), eta = terrain factor, G in %
+    function pandolfWatts(W,L,V_kmh,G,eta){ const V=V_kmh/3.6; return 1.5*W + 2.0*(W+L)*Math.pow(L/W,2) + eta*(W+L)*(1.5*V*V + 0.35*V*G); }
+    const wattsToMET=(P,kg)=> (P*0.86)/kg/1.0; // kcal/h per W = 0.86; 1 MET = 1 kcal/kg/h
+
+    function targetMETfromProfile(p){
+      // HR-based VO2max (Uth): 15 * HRmax/HRrest → METmax
+      const HRrest=p.hrRest, HRmax=p.hrMax|| (220-p.age);
+      const VO2max = 15*(HRmax/HRrest); const METmax = VO2max/3.5;
+      // Base fraction from training
+      let f = ({low:0.30, rec:0.35, good:0.40, end:0.45}[p.train]||0.35);
+      // Hiking experience
+      f += ({low:-0.02, mid:0.00, high:+0.02}[p.hikeExp]||0);
+      // 5 km feeling
+      f += ({tired:-0.03, ok:0.00, fresh:+0.03}[p.feel]||0);
+      // Talk test
+      f += ({easy:-0.02, some:+0.00, hard:+0.02}[p.talk]||0);
+      // Age soft cap
+      if(p.age>=60) f -= 0.02;
+      // Heat penalty on sustainable effort
+      const heat = p.tempC>25 ? (1 - 0.02*(p.tempC-25)) : 1.0; // min ~0.8 @ +35C
+      const cal = 1 + (p.calib||0)/100;
+      let met = clamp(f*METmax, 3.0, 8.0) * clamp(heat,0.8,1.0) * cal;
+      return {METmax, met};
+    }
+
+    function weatherSpeedFactor(wind, exposure, precip){
+      let f_wind = (exposure==='open') ? (1 - Math.max(0, wind-5)*0.03) : (1 - Math.max(0, wind-8)*0.02);
+      f_wind = clamp(f_wind, 0.7, 1.0);
+      const f_precip = ({dry:1.00, drizzle:0.97, rain:0.92}[precip]||1.0);
+      return f_wind * f_precip;
+    }
+
+    function solveSpeedForMET(W,L,G,eta,metTarget){
+      // bisection 0.5..7.5 km/h
+      let lo=0.5, hi=7.5;
+      for(let i=0;i<28;i++){
+        const mid=(lo+hi)/2; const MET=wattsToMET(pandolfWatts(W,L,mid,G,eta),W);
+        if(MET>metTarget) hi=mid; else lo=mid;
+      }
+      return lo;
+    }
+
+    function iterateDistance(p){
+      // moving time from cycles (50 min each), long break doesn't change moving time
+      const moveH = (num(gi('cycles').value,8)*50)/60; // h
+      const eta=num(gi('terrain').value,1.1);
+      const W=p.weight, L=p.pack;
+      const metT = p.metTarget; const f_weather = weatherSpeedFactor(p.wind, p.exposure, p.precip);
+
+      let D=18; // initial guess km
+      for(let i=0;i<24;i++){
+        const G = (p.ascent / Math.max(1, D*10)); // %; ascent/(km*1000)*100 = ascent/(10*km)
+        const V = solveSpeedForMET(W,L,G,eta,metT) * f_weather; // km/h
+        const Dnew = V * moveH;
+        if(Math.abs(Dnew-D)<0.05) { D=Dnew; break; }
+        D=Dnew;
+      }
+      const Gfinal = (p.ascent / Math.max(1, D*10));
+      const Vfinal = solveSpeedForMET(W,L,Gfinal,eta,metT) * f_weather;
+      return {kmDay:D, vSust:Vfinal};
+    }
+
+    function solveMaxPackForTarget(p, targetKm){
+      const moveH=(num(gi('cycles').value,8)*50)/60; const eta=num(gi('terrain').value,1.1);
+      const f_w=weatherSpeedFactor(p.wind,p.exposure,p.precip); const G=(p.ascent/Math.max(1,targetKm*10));
+      let lo=0, hi=40; // kg
+      for(let i=0;i<28;i++){
+        const mid=(lo+hi)/2; const V=solveSpeedForMET(p.weight,mid,G,eta,p.metTarget)*f_w; const D=V*moveH; if(D>=targetKm) lo=mid; else hi=mid; }
+      return lo;
+    }
+
+    function compute(){
+      const prof={
+        weight:num(gi('weight').value,85), height:num(gi('height').value,178), age:num(gi('age').value,40), sex:gi('sex').value,
+        hrRest:num(gi('hrRest').value,55), hrMax:num(gi('hrMax').value,''), train:gi('train').value, hikeExp:gi('hikeExp').value,
+        ownFlat:num(gi('ownFlat').value,5.0), feel:gi('feel').value, talk:gi('talk').value,
+        tempC:num(gi('tempC').value,10), wind:num(gi('wind').value,4), exposure:gi('exposure').value, precip:gi('precip').value,
+        pack:num(gi('pack').value,10), ascent:num(gi('ascent').value,600), calib:num(gi('cal').value,0)
+      };
+
+      const tgt=targetMETfromProfile(prof); prof.metTarget=tgt.met;
+      // Iterate distance
+      const iter=iterateDistance(prof);
+
+      // Weekly (oletus 6 vaelluspäivää)
+      const kmWeek = iter.kmDay * 6;
+
+      // What-if −2 kg
+      const p2={...prof, pack:Math.max(0, prof.pack-2)}; const iter2=iterateDistance(p2);
+
+      // Max pack for target (tavoite = nykyinen tulos)
+      const Lmax = solveMaxPackForTarget(prof, iter.kmDay);
+
+      // UI
+      gi('metTarget').textContent = `${tgt.met.toFixed(1)} MET (METmax ~ ${(tgt.met/({low:0.30,rec:0.35,good:0.40,end:0.45}[prof.train]||0.35)).toFixed(1)})`;
+      gi('vSust').textContent = `${iter.vSust.toFixed(2)} km/h`;
+      gi('kmDay').textContent = `${iter.kmDay.toFixed(1)} km/pv`;
+      gi('kmWeek').textContent = `${kmWeek.toFixed(0)} km/viikko (6 pv)`;
+      gi('maxPack').textContent = `${Lmax.toFixed(1)} kg (tavoite‑km/pv)`;
+      gi('delta2kg').textContent = `${iter2.kmDay.toFixed(1)} km/pv`;
+
+      const moveH=(num(gi('cycles').value,8)*50)/60; const longB=num(gi('longBreak').value,30);
+      const explain=[
+        `VO₂max≈15×(HRmax/HRrest); tavoiteosuus määritelty taustojen ja tuntemuksen perusteella (kestävä all‑day kuorma).`,
+        `Nopeus ratkaistu Pandolfin kuormamallilla (η=${num(gi('terrain').value,1.1)}, nousu suhteessa päivän kilometreihin).`,
+        `Liikeaika ${moveH.toFixed(2)} h/pv (50/10‑syklit), yksi ${longB} min pidempi tauko ei muuta liikeaikaa.`
+      ].join(' ');
+      gi('explain').textContent=explain;
+    }
+
+    // Presetit
+    gi('preset1').addEventListener('click',()=>{ gi('terrain').value='1.1'; gi('pack').value='10'; gi('ascent').value='600'; gi('tempC').value='10'; gi('wind').value='4'; gi('exposure').value='open'; gi('precip').value='dry'; gi('cal').value=0; compute(); });
+    gi('preset2').addEventListener('click',()=>{ gi('terrain').value='1.3'; gi('pack').value='18'; gi('ascent').value='900'; gi('tempC').value='12'; gi('wind').value='6'; gi('exposure').value='open'; gi('precip').value='drizzle'; gi('cal').value='5'; compute(); });
+    gi('preset3').addEventListener('click',()=>{ gi('terrain').value='1.8'; gi('pack').value='14'; gi('ascent').value='500'; gi('tempC').value='22'; gi('wind').value='5'; gi('exposure').value='open'; gi('precip').value='dry'; gi('cal').value='0'; compute(); });
+
+    gi('calc').addEventListener('click', compute);
+  </script>
+</body>
+</html>

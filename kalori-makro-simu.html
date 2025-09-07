@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kalori & makro -simu v3 – päiväkulutus + ostoslista (A/B) + reissun kokonaisuus + elektrolyytit + kcal/g + CSV</title>
+  <style>
+    :root{--bg:#0b0d10;--card:#12161b;--ink:#e9edf1;--muted:#9fb0c0;--accent:#4fd1c5}
+    *{box-sizing:border-box}body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto;background:#0b0d10;color:#e9edf1}
+    header{padding:14px 18px;border-bottom:1px solid #1f2937;background:#0b0d10;position:sticky;top:0}
+    h1{font-size:18px;margin:0}
+    main{padding:18px;max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1.1fr .9fr;gap:16px}
+    @media (max-width:1024px){main{grid-template-columns:1fr}}
+    .card{background:#12161b;border:1px solid #1f2937;border-radius:14px;padding:14px}
+    .section-title{font-size:13px;text-transform:uppercase;color:#9fb0c0;letter-spacing:.12em;margin:8px 0}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    label{font-size:12px;color:#9fb0c0;display:block;margin-bottom:4px}
+    input,select{width:100%;background:#0e1217;color:#e9edf1;border:1px solid #293241;border-radius:10px;padding:9px 10px;font-size:14px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .btn{background:#4fd1c5;color:#0b0d10;border:none;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+    .btn.secondary{background:#243141;color:#e9edf1;border:1px solid #334155}
+    .muted{color:#9fb0c0;font-size:12px}
+    table{width:100%;border-collapse:collapse}
+    th,td{border-bottom:1px solid #1f2a3c;padding:8px 6px;text-align:left;font-size:14px}
+    th{color:#9fb0c0;font-weight:600}
+    .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+    .kpi>div{background:#0f1320;border:1px solid #1f2a3c;border-radius:12px;padding:12px}
+    .kpi .label{color:#9fb0c0;font-size:12px}
+    .kpi .value{font-size:18px;font-weight:800}
+    .pill{display:inline-block;background:#0f172a;border:1px solid #233147;padding:6px 10px;border-radius:999px;margin:4px 6px 0 0;font-size:13px}
+  </style>
+</head>
+<body>
+  <header><h1>Kalori & makro -simu v3</h1></header>
+  <main>
+    <section class="card">
+      <div class="section-title">1) Henkilö & reitti</div>
+      <div class="grid-4">
+        <div><label>Paino (kg)</label><input id="weight" type="text" value="100"></div>
+        <div><label>Pituus (cm)</label><input id="height" type="text" value="178"></div>
+        <div><label>Ikä</label><input id="age" type="text" value="45"></div>
+        <div><label>Sukupuoli</label>
+          <select id="sex"><option value="m" selected>Mies</option><option value="f">Nainen</option><option value="o">Muu</option></select>
+        </div>
+        <div><label>Repun paino (kg)</label><input id="pack" type="text" value="12"></div>
+        <div><label>Matka / pv (km)</label><input id="dist" type="text" value="18"></div>
+        <div><label>Nousu / pv (m)</label><input id="ascent" type="text" value="600"></div>
+        <div><label>Maasto</label>
+          <select id="terrain"><option value="trail" selected>Polku</option><option value="fell">Paljakka</option><option value="bog">Suo</option><option value="rock">Kivikko</option></select>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top:8px">
+        <div><label>Reissun pituus (pv)</label><input id="daysTrip" type="text" value="5"></div>
+        <div><label>Liikkeellä (h/pv)</label><input id="hrsMove" type="text" value="7"></div>
+      </div>
+
+      <div class="section-title">2) Makrot</div>
+      <div class="grid-4">
+        <div><label>Hiilarit %</label><input id="pC" type="text" value="50"></div>
+        <div><label>Rasva %</label><input id="pF" type="text" value="35"></div>
+        <div><label>Proteiini % (min 15)</label><input id="pP" type="text" value="15"></div>
+        <div><label>Proteiini min (g/kg)</label><input id="pMin" type="text" value="1.2"></div>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <button class="btn secondary" id="presetBalanced">Makropreset: Tasapainoinen 50/35/15</button>
+        <button class="btn secondary" id="presetCarb">Makropreset: Hiilari 60/25/15</button>
+        <button class="btn secondary" id="presetKeto">Makropreset: Keto-ish 10/70/20</button>
+      </div>
+
+      <div class="section-title">3) RT-baseline (B-vaihtoehto)</div>
+      <div class="grid-4">
+        <div><label>RT osuus päiväkaloreista %</label><input id="rtShare" type="text" value="60"></div>
+        <div><label>RT annoksia/pv (jos lukitset)</label><input id="rtFixed" type="text" placeholder="esim. 2"></div>
+        <div><label>RT annos kcal</label><input id="rtKcal" type="text" value="525"></div>
+        <div><label>RT kuivapaino / annos (g)</label><input id="rtDry" type="text" value="122"></div>
+      </div>
+      <div class="grid-2" style="margin-top:8px">
+        <div><label>RT suola / annos (g)</label><input id="rtSalt" type="text" value="4.6"></div>
+        <div><label>RT kuitu / annos (g)</label><input id="rtFiber" type="text" value="0"></div>
+      </div>
+      <div class="muted">RT = Real Turmat Pasta Bolognese (esimerkki): 525 kcal/annos; P15 g, H65 g, R22 g; kuivapaino 122 g; vettä ~378 g/annos; suola 4.6 g/annos.</div>
+
+      <div class="section-title">4) Elektrolyytit & vesi (arvio)</div>
+      <div class="grid-4">
+        <div><label>Lämpötila (°C)</label><input id="tempC" type="text" value="10"></div>
+        <div><label>Tuuli (m/s)</label><input id="wind" type="text" value="4"></div>
+        <div><label>Rasitus</label>
+          <select id="effort"><option value="low">Matala</option><option value="mod" selected>Kohtalainen</option><option value="high">Kova</option></select>
+        </div>
+        <div><label>Juoma leirissä (L)</label><input id="campL" type="text" value="0.7"></div>
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="calc">Laske</button>
+        <button class="btn secondary" id="preset1">Preset: Reipas päivä</button>
+        <button class="btn secondary" id="preset2">Preset: Kevyt päivä</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">Tulos (per päivä)</div>
+      <div class="kpi">
+        <div><div class="label">Päiväkulutus yhteensä</div><div class="value" id="kcalDay">-</div></div>
+        <div><div class="label">BMR×1.2 (leiri)</div><div class="value" id="bmrRest">-</div></div>
+        <div><div class="label">Liikkumisen energia</div><div class="value" id="moveKcal">-</div></div>
+      </div>
+      <div class="kpi">
+        <div><div class="label">Makrot / pv (g)</div><div class="value" id="macrosG">-</div></div>
+        <div><div class="label">Ostoslista A – kuivapaino / pv</div><div class="value" id="dryA">-</div></div>
+        <div><div class="label">Ostoslista B (RT) – kuivapaino / pv</div><div class="value" id="dryB">-</div></div>
+      </div>
+
+      <div class="section-title">Elektrolyytit & vesi (per päivä)</div>
+      <div class="kpi">
+        <div><div class="label">Nestetarve</div><div class="value" id="waterNeed">-</div></div>
+        <div><div class="label">Natrium</div><div class="value" id="sodiumNeed">-</div></div>
+        <div><div class="label">Huomio</div><div class="value" id="hydrationNote">-</div></div>
+      </div>
+
+      <div class="section-title" style="margin-top:10px">A/B-kaloritiheys (kcal/g)</div>
+      <div class="kpi">
+        <div><div class="label">A (päivä)</div><div class="value" id="effAday">-</div></div>
+        <div><div class="label">B (päivä)</div><div class="value" id="effBday">-</div></div>
+        <div><div class="label">Huomio</div><div class="value" id="effNote">-</div></div>
+      </div>
+
+      <div class="section-title" style="margin-top:10px">Kuitu & suola (per päivä)</div>
+      <div class="kpi">
+        <div><div class="label">A: Kuitu / Suola</div><div class="value" id="fiberSaltA">-</div></div>
+        <div><div class="label">B: Kuitu / Suola</div><div class="value" id="fiberSaltB">-</div></div>
+        <div><div class="label">CSV</div><div class="value"><button class="btn secondary" id="csvADay">Lataa A (pv) CSV</button> <button class="btn secondary" id="csvBDay">Lataa B (pv) CSV</button></div></div>
+      </div>
+
+      <div class="section-title" style="margin-top:10px">Ostoslista A (rakennan itse) – per päivä</div>
+      <table id="listA"><thead><tr><th>Tuote</th><th>g/pv</th><th>kcal/pv</th></tr></thead><tbody></tbody></table>
+
+      <div class="section-title" style="margin-top:10px">Ostoslista B (RT-baseline) – per päivä</div>
+      <table id="listB"><thead><tr><th>RT annoksia/pv</th><th>RT kcal/pv</th><th>Kuivapaino/pv</th><th>Vesi/pv</th></tr></thead><tbody></tbody></table>
+    </section>
+
+    <section class="card">
+      <div class="section-title">Reissun kokonaisuus</div>
+      <div class="kpi">
+        <div><div class="label">Kuivapaino A yhteensä</div><div class="value" id="dryATrip">-</div></div>
+        <div><div class="label">Kuivapaino B yhteensä</div><div class="value" id="dryBTrip">-</div></div>
+        <div><div class="label">RT annoksia yhteensä</div><div class="value" id="mealsTrip">-</div></div>
+      </div>
+      <div class="kpi">
+        <div><div class="label">Vesi RT:lle yhteensä</div><div class="value" id="waterRTTrip">-</div></div>
+        <div><div class="label">Nestetarve (juotava) yhteensä</div><div class="value" id="waterTrip">-</div></div>
+        <div><div class="label">Natrium yhteensä</div><div class="value" id="sodiumTrip">-</div></div>
+      </div>
+
+      <div class="section-title">A/B-kaloritiheys reissulla (kcal/g)</div>
+      <div class="kpi">
+        <div><div class="label">A (reissu)</div><div class="value" id="effATrip">-</div></div>
+        <div><div class="label">B (reissu)</div><div class="value" id="effBTrip">-</div></div>
+        <div><div class="label">CSV</div><div class="value"><button class="btn secondary" id="csvATrip">Lataa A (yht) CSV</button> <button class="btn secondary" id="csvBTrip">Lataa B (yht) CSV</button></div></div>
+      </div>
+
+      <div class="section-title" style="margin-top:10px">Ostoslista A – yhteensä</div>
+      <table id="listATrip"><thead><tr><th>Tuote</th><th>g/yht</th><th>kg</th><th>kcal/yht</th></tr></thead><tbody></tbody></table>
+
+      <div class="section-title" style="margin-top:10px">Ostoslista B (RT) – yhteensä</div>
+      <table id="listBTrip"><thead><tr><th>RT annoksia yht</th><th>RT kcal yht</th><th>Kuivapaino yht</th><th>Vesi yht</th></tr></thead><tbody></tbody></table>
+    </section>
+  </main>
+
+  <script>
+    const gi=(id)=>document.getElementById(id);
+    const num=(v,def=0)=>{const s=String(v??'').trim().replace(/\\s+/g,'').replace('−','-').replace(',','.');const x=parseFloat(s);return Number.isFinite(x)?x:def};
+
+    // Energiakaavat
+    function bmrMifflin(kg, cm, age, sex){ const s = (sex==='f')?-161:5; return 10*kg + 6.25*cm - 5*age + s; }
+    const TERRAIN_EF={trail:1.00, fell:1.10, bog:1.30, rock:1.35};
+    function moveEnergyKcal(kgBody, kgPack, km, ascent_m, terrain){ const m=kgBody+kgPack; const flat=1.0*m*km*(TERRAIN_EF[terrain]||1.0); const vert=4*((m*9.81*ascent_m)/4186); return flat+vert; }
+
+    // Ostoslista A perustuotteet (kcal/100g, P/C/F g/100g, fiber g/100g, salt g/100g)
+    const FOODS={
+      oats:{name:'Kaurahiutale', kcal:370, P:13, C:60, F:7, fiber:10, salt:0.01},
+      nuts:{name:'Pähkinät sekoitus (suolaton)', kcal:600, P:15, C:20, F:55, fiber:7, salt:0.01},
+      olive:{name:'Oliiviöljy', kcal:884, P:0, C:0, F:100, fiber:0, salt:0},
+      jerky:{name:'Kuivaliha', kcal:300, P:50, C:3, F:4, fiber:0, salt:3.0},     // karkea: ~3 g suolaa / 100 g
+      choco:{name:'Tumma suklaa', kcal:550, P:6, C:46, F:36, fiber:10, salt:0.02}
+    };
+
+    function gramFromKcal(kcal, per100){ return (kcal / per100) * 100; }
+
+    function planListA(kcalDay, targetP, targetC, targetF){
+      let Pleft=targetP, Cleft=targetC, Fleft=targetF;
+      const rows=[];
+      // Proteiini jerky
+      const gJerky = Math.max(0, (Pleft / FOODS.jerky.P) * 100);
+      const kcalJerky = (gJerky/100)*FOODS.jerky.kcal; Pleft = Math.max(0, Pleft - (gJerky/100)*FOODS.jerky.P);
+      rows.push({n:FOODS.jerky.name,g:gJerky,k:kcalJerky, f:(gJerky/100)*FOODS.jerky.fiber, s:(gJerky/100)*FOODS.jerky.salt});
+      // Hiilarit kaura
+      const gOats = Math.max(0, (Cleft / FOODS.oats.C) * 100);
+      const kcalOats = (gOats/100)*FOODS.oats.kcal; Cleft = Math.max(0, Cleft - (gOats/100)*FOODS.oats.C);
+      rows.push({n:FOODS.oats.name,g:gOats,k:kcalOats, f:(gOats/100)*FOODS.oats.fiber, s:(gOats/100)*FOODS.oats.salt});
+      // Rasva öljy
+      const neededFatKcal = Fleft*9;
+      const gOil = Math.max(0, gramFromKcal(neededFatKcal, FOODS.olive.kcal));
+      rows.push({n:FOODS.olive.name,g:gOil,k:(gOil/100)*FOODS.olive.kcal, f:0, s:0});
+      // Pyöristys pähkinä + suklaa
+      const remK = Math.max(0, kcalDay - rows.reduce((s,r)=>s+r.k,0));
+      const addEach = remK/2;
+      if(addEach>1){
+        const gNuts = gramFromKcal(addEach, FOODS.nuts.kcal);
+        const gChoco = gramFromKcal(addEach, FOODS.choco.kcal);
+        rows.push({n:FOODS.nuts.name,g:gNuts,k:addEach, f:(gNuts/100)*FOODS.nuts.fiber, s:(gNuts/100)*FOODS.nuts.salt});
+        rows.push({n:FOODS.choco.name,g:gChoco,k:addEach, f:(gChoco/100)*FOODS.choco.fiber, s:(gChoco/100)*FOODS.choco.salt});
+      }
+      const dry = Math.round(rows.reduce((s,r)=>s+r.g,0));
+      const fiber = rows.reduce((s,r)=>s+r.f,0);
+      const salt = rows.reduce((s,r)=>s+r.s,0);
+      return {rows, dry, fiber, salt};
+    }
+
+    // Hikoilu & elektrolyytit (heuristiikka)
+    function sweatRateLph(tempC, wind, effort){
+      let base = 0.35; // L/h @ 10°C, mod
+      base += 0.02 * Math.max(0, tempC - 10);
+      if(tempC<10) base -= 0.01 * Math.max(0, 10 - tempC);
+      if(effort==='high') base += 0.20; else if(effort==='low') base -= 0.10;
+      if(tempC<5 && wind>6) base -= 0.05;
+      return Math.min(1.2, Math.max(0.2, base));
+    }
+    function sodiumMgPerH(effort){ return (effort==='high')?700 : (effort==='low'?300:500); }
+
+    // CSV helper
+    function downloadCSV(filename, rows){
+      const csv = rows.map(r=>r.map(x=>String(x).replaceAll('"','""')).map(x=>/[,;\n"]/.test(x)?`"${x}"`:x).join(',')).join('\n');
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href);
+    }
+
+    function compute(){
+      const kg=num(gi('weight').value,100), cm=num(gi('height').value,178), age=num(gi('age').value,45), sex=gi('sex').value;
+      const pack=num(gi('pack').value,12), km=num(gi('dist').value,18), asc=num(gi('ascent').value,600), terr=gi('terrain').value;
+      let pC=num(gi('pC').value,50), pF=num(gi('pF').value,35), pP=num(gi('pP').value,15), pMin=num(gi('pMin').value,1.2);
+      const rtShare=num(gi('rtShare').value,60)/100, rtFixed=num(gi('rtFixed').value,''), rtKcal=num(gi('rtKcal').value,525), rtDry=num(gi('rtDry').value,122);
+      const rtSaltPer=num(gi('rtSalt').value,4.6), rtFiberPer=num(gi('rtFiber').value,0);
+      const daysTrip=num(gi('daysTrip').value,5), hrsMove=num(gi('hrsMove').value,7);
+      const tempC=num(gi('tempC').value,10), wind=num(gi('wind').value,4), effort=gi('effort').value;
+
+      // BMR & liikkuminen
+      const BMR=bmrMifflin(kg,cm,age,sex);
+      const restKcal=BMR*1.2;
+      const moveK=moveEnergyKcal(kg,pack,km,asc,terr);
+      const kcalDay=Math.round(restKcal+moveK);
+
+      // Makrot (g) – proteiiniminimi
+      let gC=Math.round((kcalDay*pC/100)/4), gF=Math.round((kcalDay*pF/100)/9), gP=Math.round((kcalDay*pP/100)/4);
+      const pMinG=Math.round(pMin*kg);
+      if(gP<pMinG){ const delta=pMinG-gP; gP=pMinG; gC=Math.max(0, gC-Math.round(delta)); }
+
+      // Ostoslista A
+      const A=planListA(kcalDay, gP, gC, gF);
+
+      // Ostoslista B (RT)
+      let meals=0, kcalRT=0, dryRT=0, waterRT=0;
+      if(rtFixed){ meals=Math.max(0, Math.ceil(num(rtFixed,0))); }
+      else { meals=Math.max(0, Math.ceil((kcalDay*rtShare)/rtKcal)); }
+      kcalRT=meals*rtKcal; dryRT=meals*rtDry; waterRT=meals*(500-rtDry);
+      const saltB = meals*rtSaltPer;      // g/pv
+      const fiberB = meals*rtFiberPer;    // g/pv
+
+      // Elektrolyytit & vesi
+      const lph=sweatRateLph(tempC, wind, effort);
+      const naMgH=sodiumMgPerH(effort);
+      const waterDay = lph*hrsMove + num(gi('campL').value,0.7);
+      const sodiumDay = naMgH*hrsMove;
+
+      // KPI per päivä
+      gi('kcalDay').textContent = `${kcalDay} kcal`;
+      gi('bmrRest').textContent = `${Math.round(restKcal)} kcal`;
+      gi('moveKcal').textContent = `${Math.round(moveK)} kcal`;
+      gi('macrosG').textContent = `H ${gC} g / R ${gF} g / P ${gP} g`;
+      gi('dryA').textContent = `${A.dry} g/pv`;
+      gi('dryB').textContent = `${dryRT} g/pv`;
+
+      gi('waterNeed').textContent = `${waterDay.toFixed(1)} L/pv`;
+      gi('sodiumNeed').textContent = `${Math.round(sodiumDay)} mg Na/pv`;
+      gi('hydrationNote').textContent = (effort==='high'||tempC>22) ? 'Juo säännöllisesti, lisää suolaa.' : 'Kevyt juomatahti riittää.';
+
+      // A/B kaloritiheys (kcal/g)
+      const effA_day = (A.dry>0)? (kcalDay/A.dry) : 0;
+      const effB_day = (dryRT>0)? (kcalRT/dryRT) : 0;
+      gi('effAday').textContent = effA_day ? effA_day.toFixed(2) : '–';
+      gi('effBday').textContent = effB_day ? effB_day.toFixed(2) : '–';
+      gi('effNote').textContent = (effB_day && effA_day) ? (effB_day>effA_day?'RT on energiatehokkaampi (kcal/g).':'A-rakenna-itse on energiatehokkaampi (kcal/g).') : '–';
+
+      // Kuitu & suola / pv
+      gi('fiberSaltA').textContent = `${Math.round(A.fiber)} g kuitua / ${A.salt.toFixed(2)} g suolaa`;
+      gi('fiberSaltB').textContent = `${Math.round(fiberB)} g kuitua / ${saltB.toFixed(2)} g suolaa`;
+
+      // Päivätaulukot
+      const tbA=document.querySelector('#listA tbody'); tbA.innerHTML='';
+      A.rows.forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${r.n}</td><td>${Math.round(r.g)}</td><td>${Math.round(r.k)}</td>`; tbA.appendChild(tr); });
+      const tbB=document.querySelector('#listB tbody'); tbB.innerHTML='';
+      const trB=document.createElement('tr'); trB.innerHTML=`<td>${meals}</td><td>${kcalRT}</td><td>${dryRT} g</td><td>${waterRT} g</td>`; tbB.appendChild(trB);
+
+      // Reissun kokonaisuus (A)
+      const tbAT=document.querySelector('#listATrip tbody'); tbAT.innerHTML='';
+      A.rows.forEach(r=>{ const gTot=r.g*daysTrip, kTot=r.k*daysTrip; const tr=document.createElement('tr'); tr.innerHTML=`<td>${r.n}</td><td>${Math.round(gTot)}</td><td>${(gTot/1000).toFixed(2)} kg</td><td>${Math.round(kTot)}</td>`; tbAT.appendChild(tr); });
+      gi('dryATrip').textContent = `${(A.dry*daysTrip/1000).toFixed(2)} kg`;
+
+      // Reissun kokonaisuus (B)
+      const mealsTrip = meals*daysTrip; const kcalRTTrip = kcalRT*daysTrip; const dryRTTrip = dryRT*daysTrip; const waterRTTrip = waterRT*daysTrip;
+      const tbBT=document.querySelector('#listBTrip tbody'); tbBT.innerHTML='';
+      const trBT=document.createElement('tr'); trBT.innerHTML=`<td>${mealsTrip}</td><td>${kcalRTTrip}</td><td>${(dryRTTrip/1000).toFixed(2)} kg</td><td>${(waterRTTrip/1000).toFixed(2)} kg</td>`; tbBT.appendChild(trBT);
+      gi('dryBTrip').textContent = `${(dryRTTrip/1000).toFixed(2)} kg`;
+      gi('mealsTrip').textContent = `${mealsTrip}`;
+      gi('waterRTTrip').textContent = `${(waterRTTrip/1000).toFixed(2)} kg`;
+
+      // Reissun nesteytys/Na
+      gi('waterTrip').textContent = `${(waterDay*daysTrip).toFixed(1)} L`;
+      gi('sodiumTrip').textContent = `${Math.round(sodiumDay*daysTrip)} mg`;
+
+      // Reissun kaloritiheys
+      const effA_trip = (A.dry>0)? ((kcalDay*daysTrip)/(A.dry*daysTrip)) : 0;
+      const effB_trip = (dryRT>0)? ((kcalRT*daysTrip)/(dryRT*daysTrip)) : 0;
+      gi('effATrip').textContent = effA_trip ? effA_trip.toFixed(2) : '–';
+      gi('effBTrip').textContent = effB_trip ? effB_trip.toFixed(2) : '–';
+
+      // CSV napit
+      document.getElementById('csvADay').onclick = ()=>{
+        const rows=[['Tuote','g/pv','kcal/pv','kuitu g','suola g']];
+        A.rows.forEach(r=>rows.push([r.n, Math.round(r.g), Math.round(r.k), (r.f||0).toFixed(1), (r.s||0).toFixed(2)]));
+        rows.push(['Yhteensä', A.dry, kcalDay, Math.round(A.fiber), A.salt.toFixed(2)]);
+        downloadCSV('ostoslista_A_paiva.csv', rows);
+      };
+      document.getElementById('csvBDay').onclick = ()=>{
+        const rows=[['RT annoksia/pv','RT kcal/pv','Kuivapaino/pv (g)','Vesi/pv (g)','Suola/pv (g)','Kuitu/pv (g)']];
+        rows.push([meals, kcalRT, dryRT, waterRT, saltB.toFixed(2), Math.round(fiberB)]);
+        downloadCSV('ostoslista_B_paiva.csv', rows);
+      };
+      document.getElementById('csvATrip').onclick = ()=>{
+        const rows=[['Tuote','g/yht','kg','kcal/yht','kuitu yht g','suola yht g']];
+        A.rows.forEach(r=>{ const gTot=r.g*daysTrip, kTot=r.k*daysTrip; rows.push([r.n, Math.round(gTot), (gTot/1000).toFixed(2), Math.round(kTot), (r.f*daysTrip||0).toFixed(1), (r.s*daysTrip||0).toFixed(2)]); });
+        rows.push(['Yhteensä', Math.round(A.dry*daysTrip), (A.dry*daysTrip/1000).toFixed(2), Math.round(kcalDay*daysTrip), Math.round(A.fiber*daysTrip), (A.salt*daysTrip).toFixed(2)]);
+        downloadCSV('ostoslista_A_reissu.csv', rows);
+      };
+      document.getElementById('csvBTrip').onclick = ()=>{
+        const rows=[['RT annoksia yht','RT kcal yht','Kuivapaino yht (kg)','Vesi yht (kg)','Suola yht (g)','Kuitu yht (g)']];
+        rows.push([mealsTrip, kcalRTTrip, (dryRTTrip/1000).toFixed(2), (waterRTTrip/1000).toFixed(2), (saltB*daysTrip).toFixed(2), Math.round(fiberB*daysTrip)]);
+        downloadCSV('ostoslista_B_reissu.csv', rows);
+      };
+    }
+
+    // Makro-presets
+    gi('presetBalanced').addEventListener('click',()=>{ gi('pC').value='50'; gi('pF').value='35'; gi('pP').value='15'; });
+    gi('presetCarb').addEventListener('click',()=>{ gi('pC').value='60'; gi('pF').value='25'; gi('pP').value='15'; });
+    gi('presetKeto').addEventListener('click',()=>{ gi('pC').value='10'; gi('pF').value='70'; gi('pP').value='20'; });
+
+    // Päivä-presets
+    gi('preset1').addEventListener('click',()=>{ gi('weight').value='100'; gi('height').value='178'; gi('age').value='45'; gi('sex').value='m'; gi('pack').value='12'; gi('dist').value='18'; gi('ascent').value='600'; gi('terrain').value='trail'; gi('pC').value='50'; gi('pF').value='35'; gi('pP').value='15'; gi('rtShare').value='60'; gi('rtFixed').value=''; gi('daysTrip').value='5'; gi('hrsMove').value='7'; gi('tempC').value='10'; gi('wind').value='4'; gi('effort').value='mod'; compute(); });
+    gi('preset2').addEventListener('click',()=>{ gi('weight').value='85'; gi('height').value='180'; gi('age').value='40'; gi('sex').value='m'; gi('pack').value='8'; gi('dist').value='12'; gi('ascent').value='300'; gi('terrain').value='trail'; gi('pC').value='50'; gi('pF').value='35'; gi('pP').value='15'; gi('rtShare').value='40'; gi('rtFixed').value='1'; gi('daysTrip').value='3'; gi('hrsMove').value='5'; gi('tempC').value='18'; gi('wind').value='3'; gi('effort').value='low'; compute(); });
+
+    gi('calc').addEventListener('click', compute);
+  </script>
+</body>
+</html>

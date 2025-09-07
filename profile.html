@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RetkiLab – Profiili</title>
+  <link rel="stylesheet" href="retkilab.css">
+</head>
+<body>
+  <header class="rl-header">
+    <h1>RetkiLab – Profiili</h1>
+    <nav><a href="index.html" class="rl-btn">← Etusivulle</a></nav>
+  </header>
+
+  <main class="rl-main">
+    <form id="profileForm" class="rl-form">
+      <h2>Perustiedot</h2>
+      <div class="rl-grid2">
+        <label> Paino (kg)
+          <input type="number" step="0.1" id="p_weight" placeholder="esim. 85">
+        </label>
+        <label> Pituus (cm)
+          <input type="number" step="1" id="p_height" placeholder="esim. 178">
+        </label>
+        <label> Ikä
+          <input type="number" step="1" id="p_age" placeholder="esim. 40">
+        </label>
+        <label> Sukupuoli
+          <select id="p_sex">
+            <option value="m">Mies</option>
+            <option value="f">Nainen</option>
+            <option value="o">Muu</option>
+          </select>
+        </label>
+      </div>
+
+      <h2>Kunto</h2>
+      <div class="rl-grid2">
+        <label> Leposyke HRrest (bpm)
+          <input type="number" step="1" id="p_hrRest" placeholder="esim. 55">
+        </label>
+        <label> HRmax (jos tiedät)
+          <input type="number" step="1" id="p_hrMax" placeholder="esim. 185">
+        </label>
+        <label> Oma tasavauhti (km/h tasamaalla)
+          <input type="number" step="0.1" id="p_ownFlat" placeholder="esim. 5.0">
+        </label>
+      </div>
+
+      <h2>Varusteet (oletukset)</h2>
+      <div class="rl-grid2">
+        <label> Tyypillinen rinkan paino (kg)
+          <input type="number" step="0.1" id="p_pack" placeholder="esim. 10">
+        </label>
+      </div>
+
+      <div class="rl-row">
+        <button class="rl-btn" id="saveBtn">Tallenna profiili</button>
+        <button class="rl-btn rl-outline" id="clearBtn" type="button">Tyhjennä profiili</button>
+      </div>
+      <p class="muted">Profiili tallentuu vain omaan selaimeesi (localStorage).</p>
+    </form>
+  </main>
+
+  <footer class="rl-footer">
+    <small>RetkiLab ©</small>
+  </footer>
+
+  <script src="retkilab-profile.js"></script>
+  <script>
+    // esitäytä kentät jos profiili olemassa
+    const P = RetkiLab.loadProfile();
+    ['weight','height','age','sex','hrRest','hrMax','ownFlat','pack'].forEach(k=>{
+      const el = document.getElementById('p_'+k);
+      if(el && P[k]!=null && P[k]!=='' ) el.value = P[k];
+    });
+
+    document.getElementById('saveBtn').addEventListener('click', (e)=>{
+      e.preventDefault();
+      const prof = {
+        weight: p_weight.value, height: p_height.value, age: p_age.value, sex: p_sex.value,
+        hrRest: p_hrRest.value, hrMax: p_hrMax.value, ownFlat: p_ownFlat.value, pack: p_pack.value
+      };
+      RetkiLab.saveProfile(prof);
+      alert('Profiili tallennettu!');
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', ()=>{
+      RetkiLab.clearProfile();
+      document.getElementById('profileForm').reset();
+      alert('Profiili tyhjennetty.');
+    });
+  </script>
+</body>
+</html>

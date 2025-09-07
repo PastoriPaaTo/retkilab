@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Layer‑velho v4 – kerrospukeutuminen + rinkka + IREQ</title>
+  <style>
+    :root{--bg:#0b0d10;--card:#12161b;--ink:#e9edf1;--muted:#9fb0c0;--accent:#4fd1c5;--bad:#ff6b6b;--ok:#a7f3d0}
+    *{box-sizing:border-box}body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto;background:var(--bg);color:var(--ink)}
+    header{padding:14px 18px;border-bottom:1px solid #1f2937;background:#0b0d10;position:sticky;top:0}
+    h1{font-size:18px;margin:0}
+    main{padding:18px;max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1.05fr .95fr;gap:16px}
+    @media (max-width:960px){main{grid-template-columns:1fr}}
+    .card{background:var(--card);border:1px solid #1f2937;border-radius:14px;padding:14px}
+    .section-title{font-size:13px;text-transform:uppercase;color:var(--muted);letter-spacing:.12em;margin:8px 0}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+    input,select{width:100%;background:#0e1217;color:var(--ink);border:1px solid #293241;border-radius:10px;padding:9px 10px;font-size:14px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .btn{background:var(--accent);color:#0b0d10;border:none;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+    .btn.secondary{background:#243141;color:var(--ink);border:1px solid #334155}
+    .muted{color:var(--muted);font-size:12px}
+    .pill{display:inline-block;background:#0f172a;border:1px solid #233147;padding:6px 10px;border-radius:999px;margin:4px 6px 0 0;font-size:13px}
+    .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+    .kpi>div{background:#0f1320;border:1px solid #1f2a3c;border-radius:12px;padding:12px}
+    .kpi .label{color:var(--muted);font-size:12px}
+    .kpi .value{font-size:18px;font-weight:800}
+    .warn{color:var(--bad);font-weight:700}
+  </style>
+</head>
+<body>
+  <header><h1>Layer‑velho v4 – kerrospukeutuminen + rinkka + IREQ</h1></header>
+  <main>
+    <section class="card">
+      <div class="section-title">1) Sää ja olosuhteet</div>
+      <div class="grid">
+        <div><label>Lämpötila päivällä (°C)</label><input id="tempDay" type="text" value="18"></div>
+        <div><label>Tuuli (m/s)</label><input id="wind" type="text" value="4"></div>
+        <div><label>Suhteellinen kosteus (%)</label><input id="rh" type="text" value="55"></div>
+        <div><label>Altistus</label>
+          <select id="exposure"><option value="open" selected>Avoin</option><option value="forest">Metsä</option></select>
+        </div>
+        <div><label>Sade</label>
+          <select id="precip"><option value="dry" selected>Kuiva</option><option value="drizzle">Tihku</option><option value="rain">Sade</option><option value="snow">Lumi/räntä</option></select>
+        </div>
+        <div><label>Yölämpötila (°C)</label><input id="tempNight" type="text" value="8"></div>
+      </div>
+
+      <div class="section-title">2) Liikkuminen</div>
+      <div class="grid-2">
+        <div><label>Intensiteetti</label>
+          <select id="intensity"><option value="low">Matala</option><option value="moderate" selected>Kohtalainen</option><option value="high">Kova</option></select>
+        </div>
+        <div><label>Arvioitu vauhti (km/h)</label><input id="speedGuess" type="text" value="4.5"></div>
+      </div>
+
+      <div class="section-title">3) Henkilötekijät & rinkka</div>
+      <div class="grid">
+        <div><label>Oma paino (kg)</label><input id="body_kg" type="text" value="100"></div>
+        <div><label>Rinkan paino (kg)</label><input id="pack_kg" type="text" value="12"></div>
+        <div><label>Rinkan ilmanvaihto</label>
+          <select id="packVent"><option value="good" selected>Hyvä (selkärako)</option><option value="mid">Kohtalainen</option><option value="poor">Heikko</option></select>
+        </div>
+        <div><label>Sukupuoli</label>
+          <select id="sex"><option value="m" selected>Mies</option><option value="f">Nainen</option><option value="o">Muu</option></select>
+        </div>
+        <div><label>Kylmän sieto</label>
+          <select id="tolerance"><option value="weak">Heikko</option><option value="normal" selected>Normaali</option><option value="good">Hyvä</option></select>
+        </div>
+        <div><label>Hikoilu</label>
+          <select id="sweat"><option value="low">Vähäinen</option><option value="normal" selected>Normaali</option><option value="high">Runsas</option></select>
+        </div>
+      </div>
+
+      <div style="margin-top:12px" class="row">
+        <button id="calc" class="btn">Suosittele kerrokset</button>
+        <button class="btn secondary" id="preset1">Preset: 18 °C + rinkka</button>
+        <button class="btn secondary" id="preset2">Preset: Pakkasviima</button>
+        <button class="btn secondary" id="preset3">Preset: Hellepäivä</button>
+      </div>
+      <div class="muted" style="margin-top:8px">
+        Vinkki: <strong>lähde hieman viileänä</strong>. 10–15 min kävelyn jälkeen keho lämpenee. Voit myös startata lämpimämmin, mutta varaa mahdollisuus <strong>keventää vaatetusta</strong> 10–15 min jälkeen (vetoketjut auki / paita vaihtoon / kuori reppuun).
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">Tulos</div>
+      <div class="kpi">
+        <div><div class="label">Efektiivinen lämpö (päivä)</div><div class="value" id="tEff">-</div></div>
+        <div><div class="label">Clo‑tarve (liike / tauko / yö)</div><div class="value" id="clos">-</div></div>
+        <div><div class="label">Rinkan lämpöbonus</div><div class="value" id="packBonus">-</div></div>
+      </div>
+      <div class="kpi">
+        <div><div class="label">IREQ‑arvio (liike / tauko)</div><div class="value" id="ireq">-</div></div>
+        <div><div class="label">MET (ilman / rinkalla)</div><div class="value" id="metVal">-</div></div>
+        <div><div class="label">Sää</div><div class="value" id="wx">-</div></div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="section-title">Lähtö (liikkeessä)</div>
+        <div id="moveLayers">-</div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="section-title">Tauko</div>
+        <div id="restLayers">-</div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="section-title">Yö leirissä</div>
+        <div id="nightLayers">-</div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="section-title">Perustelu</div>
+        <div id="explain" class="muted">-</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const gi=(id)=>document.getElementById(id);
+    const num=(v,def=0)=>{const s=String(v??'').trim().replace(/\s+/g,'').replace('−','-').replace(',','.');if(s==='')return def;const n=parseFloat(s);return Number.isFinite(n)?n:def};
+    const clamp=(v,mi,ma)=>Math.min(ma,Math.max(mi,v));
+
+    // Tuulenkylmä / Lämpöindeksi
+    function windChillC(tC, w_ms){ if(tC<=10 && w_ms>1.3){ const v=w_ms*3.6; return 13.12 + 0.6215*tC - 11.37*Math.pow(v,0.16) + 0.3965*tC*Math.pow(v,0.16);} return tC }
+    function heatIndexC(tC, rh){ if(tC<27 || rh<40) return tC; const T=tC*9/5+32, R=rh; const HI=-42.379+2.04901523*T+10.14333127*R-0.22475541*T*R-0.00683783*T*T-0.05481717*R*R+0.00122874*T*T*R+0.00085282*T*R*R-0.00000199*T*T*R*R; return (HI-32)*5/9 }
+
+    // MET per intensiteetti
+    const METfromIntensity=(i)=>({low:3,moderate:5,high:7}[i]||5);
+
+    // Pandolf – ΔMET rinkan vuoksi (η≈1.1, G≈0)
+    function pandolfWatts(W,L,V_kmh,G_percent,eta){ const V=V_kmh/3.6; const G=G_percent; return 1.5*W + 2.0*(W+L)*Math.pow(L/W,2) + eta*(W+L)*(1.5*V*V + 0.35*V*G) }
+    function wattsToMET(Watts, body_kg){ return (Watts*0.86)/body_kg }
+    function deltaMET_load(W,L,V_kmh){ const eta=1.1, G=0; const P0=pandolfWatts(W,0,V_kmh,G,eta); const PL=pandolfWatts(W,L,V_kmh,G,eta); return Math.max(0, wattsToMET(PL,W) - wattsToMET(P0,W)) }
+
+    // Clo-liike (ankkuroitu lämpöön + MET)
+    function cloMoveTarget(tEff, METeff){ let clo = (tEff>=12?0.28: 0.6 + (12 - tEff)*0.06); const metAdj = 0.11 * Math.max(0, METeff - 3); return clamp(clo - metAdj, 0.18, 3.0) }
+    const cloRestBase=(tEff)=> (tEff>=12?0.7: 1.0 + (12 - tEff)*0.07)
+    const cloNightBase=(tNight)=> 1.6 + Math.max(0,(5 - tNight))*0.08
+
+    // Rinkan lämpöbonus (selän mikroilmasto)
+    function packWarmthClo(W,L,vent){ const ratio=L/Math.max(1,W); const ventK={good:0.7,mid:1.0,poor:1.3}[vent]||1.0; const raw=0.08 + 0.40*ratio; return clamp(raw*ventK, 0.0, 0.35) }
+
+    // IREQ‑lite (arvio): vaadittu Clo liikkeessä/tauolla
+    // Kalibroidaan helppoon käyttöön: 0 Clo ~20 °C (liikkeessä), ~18 °C (tauko) @ 3 MET; jokaista °C alle rajan +0.06 Clo
+    function ireqMove(tEff, METeff){ const baseT=12; const slope=0.06; const metAdj=0.10*(METeff-3); return clamp(0.30 + slope*Math.max(0, baseT - tEff) - metAdj, 0.18, 3.2) }
+    function ireqRest(tEff){ const baseT=12; const slope=0.07; return clamp(0.70 + slope*Math.max(0, baseT - tEff), 0.6, 4.0) }
+
+    // Clo‑kirjasto
+    const cat={ base_light:{label:'T‑paita (ohut merino/tekninen)',clo:0.22}, base_mid:{label:'Pitkähiha (merino/tekninen)',clo:0.35}, wind_shell:{label:'Ohut tuulitakki',clo:0.15}, rain_shell:{label:'Kuoritakki',clo:0.20}, fleece100:{label:'Kevyt fleece (100)',clo:0.35}, fleece200:{label:'Fleece (200)',clo:0.55}, puffy_light:{label:'Kevyt puffy',clo:0.70}, puffy_mid:{label:'Keskipaksu puffy',clo:1.00}, puffy_heavy:{label:'Paksu puffy',clo:1.60} };
+    const pretty=(arr)=>arr.map(id=>`<span class="pill">${cat[id].label}</span>`).join('')
+
+    function compose(target, opts){ const items=[]; let sum=0; const add=(id)=>{ if(!items.includes(id)){ items.push(id); sum+=cat[id].clo } };
+      add(target<=0.25?'base_light':'base_mid');
+      if(opts.precip!=='dry') add('rain_shell'); else if(opts.wind_ms>=6) add('wind_shell');
+      for(const id of ['fleece100','fleece200','puffy_light']) if(sum<target-0.05) add(id);
+      if(sum<target-0.05) add('puffy_mid'); if(sum<target-0.05) add('puffy_heavy');
+      return {items, clo:sum}; }
+
+    function compute(){
+      // Syötteet
+      const tDay=num(gi('tempDay').value,18), w=num(gi('wind').value,4), rh=clamp(num(gi('rh').value,55),0,100);
+      const exposure=gi('exposure').value, precip=gi('precip').value, tNight=num(gi('tempNight').value,8);
+      const intensity=gi('intensity').value, speed=num(gi('speedGuess').value,4.5);
+      const W=num(gi('body_kg').value,100), L=num(gi('pack_kg').value,12), vent=gi('packVent').value;
+      const sex=gi('sex').value, tol=gi('tolerance').value, sweat=gi('sweat').value;
+
+      // Efektiivinen lämpö
+      const windEff = exposure==='forest'?Math.max(0,w-3):w;
+      const tWC = windChillC(tDay, windEff); const tHI = heatIndexC(tDay, rh);
+      const tEff = (tDay<=10)?tWC : (tDay>=27?tHI : tDay);
+
+      // MET ilman/kuormalla
+      const METbase = METfromIntensity(intensity);
+      const dMET = deltaMET_load(W, L, speed);
+      const METeff = METbase + dMET;
+
+      // Henkilökerroin
+      const f_body=clamp(1-0.05*((W-75)/10),0.85,1.15); const f_sex={m:1.00,f:1.06,o:1.03}[sex]||1.0; const f_tol={weak:1.15,normal:1.00,good:0.90}[tol]||1.0; const f_person=f_body*f_sex*f_tol;
+      const wetS = ({low:{move:0,rest:0},normal:{move:0.05,rest:0.10},high:{move:0.10,rest:0.20}}[sweat]||{move:0.05,rest:0.10});
+
+      // Tavoite‑Clo liikkeessä (pukeutuminen) ja IREQ
+      const packClo = packWarmthClo(W,L,vent);
+      let cloMoveTargetVal = cloMoveTarget(tEff, METeff) + (precip==='dry'?0:(precip==='drizzle'?0.1:precip==='rain'?0.2:0.15)) + wetS.move;
+      let cloMoveWear = clamp((cloMoveTargetVal - packClo) * f_person, 0.18, 3.5);
+      let cloRestWear = clamp(Math.max(cloMoveWear + 0.8, cloRestBase(tEff)) + wetS.rest, 0.8, 4.0) * f_person;
+      let cloNightWear = clamp(cloNightBase(tNight) * f_person, 1.6, 4.0);
+
+      const ireq_move = ireqMove(tEff, METeff) * f_person; // arvio liikkeelle
+      const ireq_rest = ireqRest(tEff) * f_person;         // arvio tauolle
+
+      // Kerroslista
+      const move = compose(cloMoveWear, {precip,wind_ms:windEff});
+      const rest = compose(cloRestWear, {precip,wind_ms:windEff});
+      const night= compose(cloNightWear,{precip:(precip==='dry'?'dry':precip),wind_ms:windEff*0.7});
+
+      // UI
+      gi('tEff').textContent = `${tEff.toFixed(1)} °C`;
+      gi('clos').textContent = `${cloMoveWear.toFixed(2)} / ${cloRestWear.toFixed(2)} / ${cloNightWear.toFixed(2)} Clo`;
+      gi('packBonus').textContent = `−${packClo.toFixed(2)} Clo (rinkka lämmittää selkää)`;
+      gi('ireq').textContent = `${ireq_move.toFixed(2)} / ${ireq_rest.toFixed(2)} Clo`;
+      gi('metVal').textContent = `${METbase.toFixed(1)} → ${METeff.toFixed(1)} MET`;
+      gi('wx').textContent = `${precip==='dry'?'kuiva':precip}, RH ${rh}% / ${windEff.toFixed(1)} m/s ${exposure==='open'?'(avoin)':'(metsä)'} `;
+
+      gi('moveLayers').innerHTML = `${pretty(move.items)}<div class="muted">Arvio: ${move.clo.toFixed(2)} Clo (IREQ ${ireq_move.toFixed(2)})</div>`;
+      gi('restLayers').innerHTML = `${pretty(rest.items)}<div class="muted">Arvio: ${rest.clo.toFixed(2)} Clo (IREQ ${ireq_rest.toFixed(2)})</div>`;
+      gi('nightLayers').innerHTML= `${pretty(night.items)}<div class="muted">Arvio: ${night.clo.toFixed(2)} Clo</div>`;
+
+      gi('explain').innerHTML = [
+        `Efektiivinen lämpö: tuulenkylmä/helteen lämpöindeksi.`,
+        `Rinkka nostaa sisäistä kuormitusta (ΔMET) ja lämmittää selkää (−Clo).`,
+        `IREQ‑arvio (liike/tauko) näyttää vaaditun Clo‑tason; jos pinon Clo ≥ IREQ → olet todennäköisesti mukavuusalueella.`
+      ].join(' ');
+    }
+
+    // Presetit
+    gi('preset1').addEventListener('click',()=>{ gi('tempDay').value='18'; gi('wind').value='4'; gi('rh').value='55'; gi('exposure').value='open'; gi('precip').value='dry'; gi('tempNight').value='8'; gi('intensity').value='moderate'; gi('speedGuess').value='4.5'; gi('body_kg').value='100'; gi('pack_kg').value='12'; gi('packVent').value='good'; gi('sex').value='m'; gi('tolerance').value='normal'; gi('sweat').value='normal'; compute(); });
+    gi('preset2').addEventListener('click',()=>{ gi('tempDay').value='-6'; gi('wind').value='9'; gi('rh').value='75'; gi('exposure').value='open'; gi('precip').value='dry'; gi('tempNight').value='-12'; gi('intensity').value='low'; gi('speedGuess').value='3.8'; gi('body_kg').value='80'; gi('pack_kg').value='18'; gi('packVent').value='mid'; gi('sex').value='f'; gi('tolerance').value='weak'; gi('sweat').value='high'; compute(); });
+    gi('preset3').addEventListener('click',()=>{ gi('tempDay').value='29'; gi('wind').value='3'; gi('rh').value='50'; gi('exposure').value='open'; gi('precip').value='dry'; gi('tempNight').value='18'; gi('intensity').value='moderate'; gi('speedGuess').value='4.5'; gi('body_kg').value='90'; gi('pack_kg').value='10'; gi('packVent').value='good'; gi('sex').value='m'; gi('tolerance').value='good'; gi('sweat').value='normal'; compute(); });
+
+    gi('calc').addEventListener('click', compute);
+  </script>
+</body>
+</html>

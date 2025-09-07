@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nesteytys & elektrolyytit – laskin v1</title>
+  <style>
+    :root{--bg:#0b0d10;--card:#12161b;--ink:#e9edf1;--muted:#9fb0c0;--accent:#4fd1c5;--warn:#ffb86b}
+    *{box-sizing:border-box}body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto;background:var(--bg);color:var(--ink)}
+    header{padding:14px 18px;border-bottom:1px solid #1f2937;background:#0b0d10;position:sticky;top:0}
+    h1{font-size:18px;margin:0}
+    main{padding:18px;max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1.05fr .95fr;gap:16px}
+    @media (max-width:960px){main{grid-template-columns:1fr}}
+    .card{background:#12161b;border:1px solid #1f2937;border-radius:14px;padding:14px}
+    .section-title{font-size:13px;text-transform:uppercase;color:#9fb0c0;letter-spacing:.12em;margin:8px 0}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    label{font-size:12px;color:#9fb0c0;display:block;margin-bottom:4px}
+    input,select{width:100%;background:#0e1217;color:#e9edf1;border:1px solid #293241;border-radius:10px;padding:9px 10px;font-size:14px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .btn{background:#4fd1c5;color:#0b0d10;border:none;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+    .btn.secondary{background:#243141;color:#e9edf1;border:1px solid #334155}
+    .muted{color:#9fb0c0;font-size:12px}
+    .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+    .kpi>div{background:#0f1320;border:1px solid #1f2a3c;border-radius:12px;padding:12px}
+    .kpi .label{color:#9fb0c0;font-size:12px}
+    .kpi .value{font-size:18px;font-weight:800}
+    .pill{display:inline-block;background:#0f172a;border:1px solid #233147;padding:6px 10px;border-radius:999px;margin:4px 6px 0 0;font-size:13px}
+    .warn{color:var(--warn);font-weight:700}
+    table{width:100%;border-collapse:collapse}
+    th,td{border-bottom:1px solid #1f2a3c;padding:8px 6px;text-align:left;font-size:14px}
+    th{color:#9fb0c0;font-weight:600}
+  </style>
+</head>
+<body>
+  <header><h1>Nesteytys & elektrolyytit – laskin v1</h1></header>
+  <main>
+    <section class="card">
+      <div class="section-title">1) Henkilö & kuorma</div>
+      <div class="grid-4">
+        <div><label>Paino (kg)</label><input id="weight" type="text" value="100"></div>
+        <div><label>Rinkan paino (kg)</label><input id="pack" type="text" value="12"></div>
+        <div><label>Liikkeellä (h/pv)</label><input id="hrsMove" type="text" value="7"></div>
+        <div><label>Leiri‑juoma (L/pv)</label><input id="campL" type="text" value="0.7"></div>
+      </div>
+
+      <div class="section-title">2) Sää & rasitus</div>
+      <div class="grid-4">
+        <div><label>Lämpötila (°C)</label><input id="tempC" type="text" value="10"></div>
+        <div><label>Tuuli (m/s)</label><input id="wind" type="text" value="4"></div>
+        <div><label>Altistus</label>
+          <select id="exposure"><option value="open" selected>Avoin</option><option value="forest">Metsä</option></select>
+        </div>
+        <div><label>Rasitus</label>
+          <select id="effort"><option value="low">Matala</option><option value="mod" selected>Kohtalainen</option><option value="high">Kova</option></select>
+        </div>
+      </div>
+
+      <div class="section-title">3) Hikoilu & natrium</div>
+      <div class="grid-4">
+        <div><label>Hikoilu</label>
+          <select id="sweat"><option value="low">Vähäinen</option><option value="normal" selected>Normaali</option><option value="high">Runsas</option></select>
+        </div>
+        <div><label>Natrium tavoite (mg/h)</label>
+          <select id="naTarget"><option value="300">300</option><option value="500" selected>500</option><option value="700">700</option><option value="900">900</option></select>
+        </div>
+        <div><label>Pullojen koko (ml)</label><input id="bottleMl" type="text" value="500"></div>
+        <div><label>Reissun pituus (pv)</label><input id="daysTrip" type="text" value="5"></div>
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="calc">Laske</button>
+        <button class="btn secondary" id="preset1">Preset: Leuto + mod</button>
+        <button class="btn secondary" id="preset2">Preset: Kuuma + kova</button>
+        <button class="btn secondary" id="preset3">Preset: Kylmä + matala</button>
+      </div>
+      <div class="muted" style="margin-top:8px">Heuristiikka: perus hikoilu 0.35 L/h @ +10 °C, kohtalainen rasitus. +0.02 L/h per °C; kylmässä −0.01 L/h/°C alle +10. Kova rasitus +0.2 L/h, matala −0.1 L/h. Viima < +5 °C ja >6 m/s −0.05 L/h. Min 0.2, max 1.2 L/h.</div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">Tulos (per päivä)</div>
+      <div class="kpi">
+        <div><div class="label">Hikoilu (L/h)</div><div class="value" id="lph">-</div></div>
+        <div><div class="label">Juotavaa liikkeellä</div><div class="value" id="waterMove">-</div></div>
+        <div><div class="label">Juotavaa yhteensä</div><div class="value" id="waterTotal">-</div></div>
+      </div>
+      <div class="kpi">
+        <div><div class="label">Natrium / h</div><div class="value" id="naH">-</div></div>
+        <div><div class="label">Natrium / pv</div><div class="value" id="naDay">-</div></div>
+        <div><div class="label">Sekoitus pulloon</div><div class="value" id="mixPerBottle">-</div></div>
+      </div>
+
+      <div class="section-title">Reissun kokonaisuus</div>
+      <div class="kpi">
+        <div><div class="label">Juoma yhteensä</div><div class="value" id="waterTrip">-</div></div>
+        <div><div class="label">Natrium yhteensä</div><div class="value" id="naTrip">-</div></div>
+        <div><div class="label">Ohje</div><div class="value" id="tip">-</div></div>
+      </div>
+
+      <div style="margin-top:10px">
+        <div class="section-title">Aikatauluvinkki</div>
+        <div id="schedule" class="muted">-</div>
+      </div>
+
+      <div style="margin-top:10px">
+        <div class="section-title">Huomio</div>
+        <div id="note" class="warn">Tämä on suuntaa‑antava eikä lääketieteellinen ohje.</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const gi=(id)=>document.getElementById(id);
+    const num=(v,def=0)=>{const s=String(v??'').trim().replace(/\s+/g,'').replace('−','-').replace(',','.');const x=parseFloat(s);return Number.isFinite(x)?x:def};
+
+    function sweatRateLph(tempC, wind, exposure, effort, sweat){
+      let base=0.35; // L/h @ +10C, mod
+      base += 0.02*Math.max(0,tempC-10);
+      if(tempC<10) base -= 0.01*(10-tempC);
+      if(effort==='high') base += 0.20; else if(effort==='low') base -= 0.10;
+      if(tempC<5 && wind>6 && exposure==='open') base -= 0.05;
+      const mult = sweat==='high'?1.2 : sweat==='low'?0.8 : 1.0;
+      base*=mult;
+      return Math.min(1.2, Math.max(0.2, base));
+    }
+
+    function compute(){
+      const weight=num(gi('weight').value,100);
+      const pack=num(gi('pack').value,12);
+      const hrs=num(gi('hrsMove').value,7);
+      const campL=num(gi('campL').value,0.7);
+
+      const tempC=num(gi('tempC').value,10);
+      const wind=num(gi('wind').value,4);
+      const exposure=gi('exposure').value;
+      const effort=gi('effort').value;
+      const sweat=gi('sweat').value;
+
+      const naTarget = num(gi('naTarget').value,500); // mg/h
+      const bottleMl = num(gi('bottleMl').value,500);
+      const daysTrip = num(gi('daysTrip').value,5);
+
+      const lph=sweatRateLph(tempC, wind, exposure, effort, sweat);
+      const waterMove = lph*hrs; // L
+      const waterTotal = waterMove + campL; // L
+
+      // Sodium
+      let naH=naTarget; // mg/h
+      if(tempC>22) naH+=100; // kuuma
+      const naDay = naH*hrs; // mg/pv
+
+      // Bottle mix (mg / bottle)
+      const mgPerL = naH*1.0; // mg/h ~ mg/L (oletus 1L/h kohdistus), skaalataan juomarytmiin alla
+      const mgPerBottle = Math.round((mgPerL/1000)*bottleMl);
+
+      // Trip totals
+      const waterTrip = waterTotal*daysTrip;
+      const naTrip = naDay*daysTrip;
+
+      // UI
+      gi('lph').textContent = `${lph.toFixed(2)} L/h`;
+      gi('waterMove').textContent = `${waterMove.toFixed(1)} L/pv`;
+      gi('waterTotal').textContent = `${waterTotal.toFixed(1)} L/pv`;
+
+      gi('naH').textContent = `${Math.round(naH)} mg/h`;
+      gi('naDay').textContent = `${Math.round(naDay)} mg/pv`;
+      gi('mixPerBottle').textContent = `${mgPerBottle} mg Na / ${bottleMl} ml`;
+
+      gi('waterTrip').textContent = `${waterTrip.toFixed(1)} L`;
+      gi('naTrip').textContent = `${Math.round(naTrip)} mg`;
+
+      // Schedule tip
+      const ml10 = Math.round((waterMove*1000)/(hrs*6)); // /h → /10min
+      gi('schedule').textContent = `Juomatahti: noin ${ml10} ml joka 10. minuutti liikkeessä (yht. ${(waterMove*1000/hrs).toFixed(0)} ml/h).`;
+
+      // Tip text
+      const tips=[];
+      if(waterTotal>5) tips.push('Hyvin suuri juomatarve – tankkaa tasaisesti, lisää suolaa.');
+      if(naDay>5000) tips.push('Natriumia paljon – jaa tasaisesti juomiin/ruokaan.');
+      if(tempC<5 && wind>6 && exposure==='open') tips.push('Viima vähentää hikoilua – älä juo väkisin, kuulostele janoa.');
+      gi('tip').innerHTML = tips.length? tips.map(t=>`<span class="pill">${t}</span>`).join(' ') : 'Juo tasaisesti. Säädä suolaa olon mukaan (300–700 mg/h).';
+    }
+
+    // Presetit
+    gi('preset1').addEventListener('click',()=>{ gi('tempC').value='12'; gi('wind').value='4'; gi('exposure').value='open'; gi('effort').value='mod'; gi('sweat').value='normal'; gi('hrsMove').value='7'; compute(); });
+    gi('preset2').addEventListener('click',()=>{ gi('tempC').value='26'; gi('wind').value='2'; gi('exposure').value='open'; gi('effort').value='high'; gi('sweat').value='high'; gi('hrsMove').value='8'; compute(); });
+    gi('preset3').addEventListener('click',()=>{ gi('tempC').value='0'; gi('wind').value='8'; gi('exposure').value='open'; gi('effort').value='low'; gi('sweat').value='low'; gi('hrsMove').value='5'; compute(); });
+
+    gi('calc').addEventListener('click', compute);
+  </script>
+</body>
+</html>

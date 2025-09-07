@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sähköbudjetti v4 – pankit (mAh/Wh) + profiilit + täysistä akuista</title>
+  <style>
+    :root{--bg:#0b0d10;--card:#12161b;--ink:#e9edf1;--muted:#9fb0c0;--accent:#4fd1c5;--bad:#ff6b6b;--ok:#a7f3d0}
+    *{box-sizing:border-box}body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto;background:var(--bg);color:var(--ink)}
+    header{padding:14px 18px;border-bottom:1px solid #1f2937;background:#0b0d10;position:sticky;top:0}
+    h1{font-size:18px;margin:0}
+    main{padding:18px;max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1.15fr .85fr;gap:16px}
+    @media (max-width:1024px){main{grid-template-columns:1fr}}
+    .card{background:var(--card);border:1px solid #1f2937;border-radius:14px;padding:14px}
+    .section-title{font-size:13px;text-transform:uppercase;color:var(--muted);letter-spacing:.12em;margin:8px 0}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+    input,select{width:100%;background:#0e1217;color:var(--ink);border:1px solid #293241;border-radius:10px;padding:9px 10px;font-size:14px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .btn{background:var(--accent);color:#0b0d10;border:none;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+    .btn.secondary{background:#243141;color:var(--ink);border:1px solid #334155}
+    .muted{color:var(--muted);font-size:12px}
+    table{width:100%;border-collapse:collapse}
+    th,td{border-bottom:1px solid #1f2a3c;padding:8px 6px;text-align:left;font-size:14px}
+    th{color:var(--muted);font-weight:600}
+    .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+    .kpi>div{background:#0f1320;border:1px solid #1f2a3c;border-radius:12px;padding:12px}
+    .kpi .label{color:var(--muted);font-size:12px}
+    .kpi .value{font-size:18px;font-weight:800}
+    .ok{color:var(--ok);font-weight:800}
+    .bad{color:var(--bad);font-weight:800}
+    .del{background:#1f2937;border:1px solid #2b3b52;color:#cbd5e1;padding:4px 8px;border-radius:8px;cursor:pointer}
+    .tips{margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .tip{background:#0f1320;border:1px solid #1f2a3c;border-radius:12px;padding:12px}
+    .tip h3{margin:0 0 6px 0;font-size:14px;color:#cfe7f7}
+    .tip ul{margin:6px 0 0 18px}
+  </style>
+</head>
+<body>
+  <header><h1>Sähköbudjetti v4 – pankit (mAh/Wh) + profiilit + täysistä akuista</h1></header>
+  <main>
+    <section class="card">
+      <div class="section-title">1) Reissun parametrit</div>
+      <div class="grid-2">
+        <div><label>Päiviä</label><input id="days" type="text" value="5"></div>
+        <div><label>Alin lämpötila (°C)</label><input id="minTemp" type="text" value="7"></div>
+        <div><label>Yleishäviö latauksessa (%)</label><input id="lossPercent" type="text" value="15"></div>
+        <div><label>Paneelin muuntohäviö (%)</label><input id="solarLossPercent" type="text" value="35"></div>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <label><input type="checkbox" id="startFull" checked> Laitteet lähtevät täysinä</label>
+        <span class="muted">Näytämme ensimmäisen latauspäivän.</span>
+      </div>
+
+      <div class="section-title">2) Varavirtalähteet (pankit)</div>
+      <div class="grid">
+        <div>
+          <label>Valitse pankki</label>
+          <select id="bankPreset">
+            <option value="">— Valitse —</option>
+            <option value="nb10000">Nitecore NB10000 (10 000 mAh)</option>
+            <option value="nb20000">Nitecore NB20000 (20 000 mAh)</option>
+            <option value="mAh5000">Powerbank 5000 mAh</option>
+            <option value="mAh10000">Powerbank 10 000 mAh</option>
+            <option value="mAh20000">Powerbank 20 000 mAh</option>
+            <option value="mAh25000">Powerbank 25 000 mAh</option>
+            <option value="mAh30000">Powerbank 30 000 mAh</option>
+            <option value="custom">Lisää oma</option>
+          </select>
+        </div>
+        <div><label>Pankin nimi</label><input id="bankName" type="text" placeholder="esim. NB20000"></div>
+        <div><label>Kap. mAh (jos tiedät)</label><input id="bankmAh" type="text" placeholder="esim. 20000"></div>
+        <div><label>Wh (jos tiedät)</label><input id="bankWh" type="text" placeholder="lasketaan mAh → Wh"></div>
+        <div><label>Määrä (kpl)</label><input id="bankCount" type="text" value="1"></div>
+        <div><label>Pankin häviö (%)</label><input id="bankLoss" type="text" value="15"></div>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <button class="btn" id="addBank">Lisää pankki</button>
+        <button class="btn secondary" id="clearBanks">Tyhjennä pankit</button>
+      </div>
+      <table id="banksTable" style="margin-top:8px">
+        <thead><tr><th>Nimi</th><th>Wh/pankki</th><th>Kpl</th><th>Häviö %</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="section-title" style="margin-top:12px">3) Aurinkopaneeli (valinnainen)</div>
+      <div class="grid-2">
+        <div><label>Paneelin teho (W)</label><input id="panelW" type="text" value="0"></div>
+        <div><label>Hyödylliset aurinkotunnit / pv</label><input id="psh" type="text" value="0"></div>
+        <div><label>Derating (0–1)</label><input id="panelDerate" type="text" value="0.6"></div>
+      </div>
+
+      <div class="section-title" style="margin-top:12px">4) Laitteet (valitse kategoria tai lisää oma)</div>
+      <div class="grid-2">
+        <div>
+          <label>Kategoria</label>
+          <select id="devCat">
+            <option value="">— Valitse —</option>
+            <option value="phone">Puhelin</option>
+            <option value="gps">Käsikäyttöinen GPS</option>
+            <option value="watch">Rannetietokone / GPS-kello</option>
+            <option value="camera">Kamera</option>
+            <option value="drone">Drone</option>
+            <option value="custom">Oma laite</option>
+          </select>
+        </div>
+        <div>
+          <label>Malli (preset tai oma nimi)</label>
+          <select id="devModel"><option value="">— Valitse malli —</option></select>
+          <input id="devName" type="text" placeholder="kirjoita oma malli" style="margin-top:6px">
+        </div>
+      </div>
+
+      <div class="grid-2" id="profileRow" style="display:none; margin-top:8px">
+        <div>
+          <label>Käyttöprofiili</label>
+          <select id="devProfile"></select>
+        </div>
+        <div><label>Arvioitu kulutus (Wh/pv)</label><input id="devWhDay" type="text" value="0" disabled></div>
+      </div>
+
+      <div class="row" style="margin-top:6px">
+        <label><input type="checkbox" id="override"> Syötä kulutus käsin</label>
+        <div id="manualInputs" style="display:none; width:100%">
+          <div class="grid-2" style="margin-top:6px">
+            <div>
+              <label>Tilatapa</label>
+              <select id="devMode">
+                <option value="wh">Kulutus (Wh/pv)</option>
+                <option value="charges">Täysiä latauksia / pv</option>
+              </select>
+            </div>
+            <div><label>Arvo</label><input id="devVal" type="text" placeholder="esim. 4"></div>
+            <div><label>Laitteen akun energia (Wh)</label><input id="devWh" type="text" placeholder="esim. 12"></div>
+          </div>
+        </div>
+        <div style="margin-left:auto">
+          <label>Lataushäviö laitteelle (%)</label><input id="devLoss" type="text" value="0">
+        </div>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <button class="btn" id="addDev">Lisää laite</button>
+        <button class="btn secondary" id="clearDevs">Tyhjennä laitteet</button>
+      </div>
+
+      <table id="devsTable" style="margin-top:8px">
+        <thead><tr><th>Nimi</th><th>Kategoria</th><th>Käyttö</th><th>Kulutus (Wh/pv)</th><th>Akun Wh</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="row" style="margin-top:12px">
+        <button class="btn" id="calc">Laske sähköbudjetti</button>
+        <div class="muted">Ei autolaskentaa → paina nappia.</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">Tulos</div>
+      <div class="kpi">
+        <div><div class="label">Pankkien energia käytettävissä</div><div class="value" id="banksAvail">-</div></div>
+        <div><div class="label">Päivän kulutus (netto)</div><div class="value" id="dayUse">-</div></div>
+        <div><div class="label">Aurinkotuotto / pv</div><div class="value" id="solarDay">-</div></div>
+      </div>
+      <div class="kpi">
+        <div><div class="label">Riittää (päiviä)</div><div class="value" id="daysOk">-</div></div>
+        <div><div class="label">Vaje / Ylijäämä / pv</div><div class="value" id="deficit">-</div></div>
+        <div><div class="label">Tarvittavat NB20000 (arvio)</div><div class="value" id="nbNeed">-</div></div>
+      </div>
+
+      <div class="kpi">
+        <div><div class="label">Laitteiden omat akut yhteensä</div><div class="value" id="ownPool">-</div></div>
+        <div><div class="label">Päivä, jolloin pankkia tarvitaan</div><div class="value" id="firstCharge">-</div></div>
+        <div><div class="label">Päivät pankin varassa</div><div class="value" id="bankDays">-</div></div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="section-title">Käyttöyhteenveto / pv</div>
+        <table id="sumTable">
+          <thead><tr><th>Laite</th><th>Kategoria</th><th>Profiili</th><th>Kulutus (Wh/pv)</th><th>Akun Wh</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="tips">
+        <div class="tip">
+          <h3>Vinkit: puhelin</h3>
+          <ul>
+            <li>Lentokonetila tai ei-data alueilla: mobiilidata/BT/Wi-Fi pois.</li>
+            <li>Virransäästö, näytön kirkkaus alas, sammuta näyttö nopeasti.</li>
+            <li>Lataa 20→80 % “täydennyksinä”, mieluiten lämpimässä päivällä.</li>
+          </ul>
+        </div>
+        <div class="tip">
+          <h3>Vinkit: GPS & kello</h3>
+          <ul>
+            <li>67i: “Satunnaiset tarkistukset” → GNSS/Iridium nukkuu suurimman osan ajasta.</li>
+            <li>fēnix: GPS vain liikkeessä, AOD pois, widgetit minimiin.</li>
+            <li>BLE-synkat harvemmin; Iridium-viestit vain tarvittaessa.</li>
+          </ul>
+        </div>
+        <div class="tip">
+          <h3>Vinkit: kamera & drone</h3>
+          <ul>
+            <li>Kamera: Wi-Fi/BT pois, lyhyt kuvien katselu, “Power Save Start” lyhyeksi.</li>
+            <li>Drone: pidä akut lämpiminä; suunnittele lennot → vähemmän nostoja.</li>
+          </ul>
+        </div>
+        <div class="tip">
+          <h3>Vinkit: varavirtalähde</h3>
+          <ul>
+            <li>Pidä pankki lämpimänä (sisätasku / makuupussi yöllä).</li>
+            <li>Käytä PD-latureita ja lyhyitä kaapeleita; vältä “pankki→pankki”-ketjuja.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="margin-top:10px"><div class="section-title">Perustelu</div><div id="explain" class="muted">-</div></div>
+    </section>
+  </main>
+
+  <script>
+    const gi=(id)=>document.getElementById(id);
+    const num=(v,def=0)=>{const s=String(v??'').trim().replace(/\s+/g,'').replace('−','-').replace(',','.');const x=parseFloat(s);return Number.isFinite(x)?x:def};
+    const clamp=(v,mi,ma)=>Math.min(ma,Math.max(mi,v));
+
+    // Pankit
+    const BANKS={ nb10000:{name:'NB10000',mAh:10000,Wh:37,loss:15}, nb20000:{name:'NB20000',mAh:20000,Wh:74,loss:15}, custom:{name:'Oma pankki',mAh:0,Wh:0,loss:15}, mAh5000:{name:'Powerbank 5000 mAh',mAh:5000}, mAh10000:{name:'Powerbank 10000 mAh',mAh:10000}, mAh20000:{name:'Powerbank 20000 mAh',mAh:20000}, mAh25000:{name:'Powerbank 25000 mAh',mAh:25000}, mAh30000:{name:'Powerbank 30000 mAh',mAh:30000} };
+
+    // Profiilit (Wh/pv) ja akkujen Wh
+    const MODELS={
+      phone:{ label:'Puhelin', presets:{ iphone16pro:{name:'iPhone 16 Pro', Wh:12} }, profiles:{ B:{label:'B) Satunnainen (kuvat/viestit/sää/some)', wh:4}, C:{label:'C) Kevyt (satunnainen sää/kartta)', wh:2}, D:{label:'D) Lentokonetila, avaus 1×/pv', wh:0.8}, A:{label:'A) Arkikäyttö, lataat päivittäin', wh:12} } },
+      gps:{ label:'Käsikäyttöinen GPS', presets:{ gpsmap67i:{name:'Garmin GPSMAP 67i', Wh:10} }, profiles:{ B:{label:'B) Satunnainen, päällä', wh:2}, A:{label:'A) Aktiivinen seuranta', wh:5}, C:{label:'C) Suljettuna, tarkistus', wh:0.5} } },
+      watch:{ label:'Rannetietokone / GPS-kello', presets:{ fenix7x:{name:'Garmin fēnix 7X Solar', Wh:2} }, profiles:{ B:{label:'B) Päällä, ei GPS', wh:0.3}, A:{label:'A) Jatkuva GPS', wh:1.2} } },
+      camera:{ label:'Kamera', presets:{ a7riv:{name:'Sony A7R IV + 35mm', Wh:16} }, profiles:{ B:{label:'B) 100–200 ruutua/pv', wh:8}, C:{label:'C) 10–50 ruutua/pv', wh:3}, A:{label:'A) >1000 ruutua/pv', wh:32} } },
+      drone:{ label:'Drone', presets:{ mini4pro:{name:'DJI Mini 4 Pro', Wh:18} }, profiles:{ B:{label:'B) 1–2 akullista/pv', wh:27}, C:{label:'C) ~½ akullista/pv', wh:9}, A:{label:'A) ~3 akullista/pv', wh:54} } }
+    };
+
+    let banks=[], devs=[]; // banks: {name,Wh,count,loss}; devs: {name,cat,profileLabel,whDay,loss,battWh}
+
+    // mAh → Wh muunnos (oletus 3.7 V kennot; syötön helppous)
+    function mAhToWh(mAh, volts=3.7){ return (mAh||0)*volts/1000 }
+
+    // Kylmäderating (loiva +-lämpöihin)
+    function tempDerateFactor(t){ const pts=[[ -20,0.65 ],[ -10,0.75 ],[ 0,0.90 ],[ 10,0.97 ],[ 20,1.00 ]]; if(t<=-20) return 0.65; if(t>=20) return 1.0; for(let i=1;i<pts.length;i++){ if(t<=pts[i][0]){ const [x0,y0]=pts[i-1], [x1,y1]=pts[i]; const k=(t-x0)/(x1-x0); return y0+k*(y1-y0); } } return 1.0 }
+
+    // Pankit UI
+    gi('bankPreset').addEventListener('change',()=>{ const k=gi('bankPreset').value; if(!k) return; const p=BANKS[k]; gi('bankName').value=p.name; gi('bankLoss').value=p.loss??15; if(p.Wh){ gi('bankWh').value=p.Wh; gi('bankmAh').value=p.mAh||''; } else { gi('bankWh').value=''; gi('bankmAh').value=p.mAh||''; } if(k==='custom'){ gi('bankName').focus(); } });
+    gi('addBank').addEventListener('click',()=>{
+      const name=gi('bankName').value||'Pankki'; const mAh=num(gi('bankmAh').value,NaN); let Wh=num(gi('bankWh').value,NaN); if(!Number.isFinite(Wh) && Number.isFinite(mAh)) Wh=mAhToWh(mAh,3.7);
+      const count=Math.max(0,Math.round(num(gi('bankCount').value,1))); const loss=Math.max(0,Math.min(50,Math.round(num(gi('bankLoss').value,15)))); if(!Number.isFinite(Wh)){ alert('Anna mAh tai Wh'); return }
+      banks.push({name,Wh,count,loss}); renderBanks();
+    });
+    gi('clearBanks').addEventListener('click',()=>{ banks=[]; renderBanks(); });
+    function addBankRow(b){ const tb=document.querySelector('#banksTable tbody'); const tr=document.createElement('tr'); tr.innerHTML=`<td>${b.name}</td><td>${b.Wh.toFixed(1)}</td><td>${b.count}</td><td>${b.loss}%</td><td><button class="del">Poista</button></td>`; tr.querySelector('button').addEventListener('click',()=>{ banks=banks.filter(x=>x!==b); renderBanks(); }); tb.appendChild(tr); }
+    function renderBanks(){ const tb=document.querySelector('#banksTable tbody'); tb.innerHTML=''; banks.forEach(addBankRow); }
+
+    // Laitteet UI
+    gi('devCat').addEventListener('change',()=>{ const cat=gi('devCat').value; const modelSel=gi('devModel'); const profSel=gi('devProfile'); const nameIn=gi('devName'); modelSel.innerHTML='<option value="">— Valitse malli —</option>'; profSel.innerHTML=''; gi('devWhDay').value='0'; if(!cat){ gi('profileRow').style.display='none'; nameIn.value=''; return } if(cat==='custom'){ gi('profileRow').style.display='none'; nameIn.placeholder='oma laite (nimi)'; return; } const cfg=MODELS[cat]; Object.entries(cfg.presets).forEach(([k,v])=>{ const opt=document.createElement('option'); opt.value=k; opt.textContent=v.name; modelSel.appendChild(opt); }); nameIn.value=''; nameIn.placeholder='kirjoita oma malli (valinnainen)'; gi('profileRow').style.display='grid'; Object.entries(cfg.profiles).forEach(([k,v])=>{ const opt=document.createElement('option'); opt.value=k; opt.textContent=v.label; gi('devProfile').appendChild(opt); }); const firstKey=Object.keys(cfg.profiles)[0]; gi('devProfile').value=firstKey; gi('devWhDay').value=cfg.profiles[firstKey].wh; });
+    gi('devProfile').addEventListener('change',()=>{ const cat=gi('devCat').value; const prof=gi('devProfile').value; if(!cat||!prof||cat==='custom') return; const wh=MODELS[cat].profiles[prof].wh; gi('devWhDay').value=wh; });
+    gi('override').addEventListener('change',()=>{ const on=gi('override').checked; gi('manualInputs').style.display=on?'block':'none'; });
+
+    gi('addDev').addEventListener('click',()=>{
+      const cat=gi('devCat').value; const nameOverride=gi('devName').value.trim(); const loss=Math.max(0,Math.min(50,Math.round(num(gi('devLoss').value,0)))); if(!cat){ alert('Valitse laitekategoria tai Oma laite'); return }
+      if(cat==='custom'){
+        const name=nameOverride||'Oma laite'; const mode=gi('devMode').value; const val=num(gi('devVal').value,NaN); const battWh=num(gi('devWh').value,0); if(!Number.isFinite(val)){ alert('Anna kulutus (Wh/pv) tai latauksia/pv'); return } if(mode==='charges' && !Number.isFinite(battWh)){ alert('Anna akun energia Wh (esim. 12)'); return } const whDay=(mode==='wh')?val:(val*battWh); devs.push({name,cat,profileLabel:'Manuaalinen',whDay,loss,battWh:Math.max(0,battWh)}); renderDevs(); return;
+      }
+      const cfg=MODELS[cat]; const modelKey=gi('devModel').value; const prof=gi('devProfile').value; if(!prof){ alert('Valitse käyttöprofiili'); return } const profLabel=cfg.profiles[prof].label; let whDay=num(gi('devWhDay').value, cfg.profiles[prof].wh); const battWh=(modelKey?cfg.presets[modelKey].Wh:0); const name = nameOverride || (modelKey? cfg.presets[modelKey].name : cfg.label); devs.push({name,cat,profileLabel:profLabel,whDay,loss,battWh}); renderDevs();
+    });
+    gi('clearDevs').addEventListener('click',()=>{ devs=[]; renderDevs(); });
+
+    function addDevRow(d){ const tb=document.querySelector('#devsTable tbody'); const tr=document.createElement('tr'); tr.innerHTML=`<td>${d.name}</td><td>${MODELS[d.cat]?MODELS[d.cat].label:'Oma'}</td><td>${d.profileLabel}</td><td>${d.whDay.toFixed(2)}</td><td>${(d.battWh||0).toFixed(1)}</td><td><button class=\"del\">Poista</button></td>`; tr.querySelector('button').addEventListener('click',()=>{ devs=devs.filter(x=>x!==d); renderDevs(); }); tb.appendChild(tr); }
+    function renderDevs(){ const tb=document.querySelector('#devsTable tbody'); tb.innerHTML=''; devs.forEach(addDevRow); }
+
+    function compute(){
+      const days=num(gi('days').value,5), minT=num(gi('minTemp').value,7), lossGeneral=clamp(num(gi('lossPercent').value,15)/100,0,0.5), solarLoss=clamp(num(gi('solarLossPercent').value,35)/100,0,0.9); const tDer=(minT!==0)?tempDerateFactor(minT):0.90;
+
+      // Pankit Wh käytettävissä
+      let bankWh=0; for(const b of banks){ const bankLoss=clamp((b.loss??15)/100,0,0.5); bankWh += b.Wh * b.count * (1-bankLoss) * tDer; }
+
+      // Aurinko / pv
+      const panelW=num(gi('panelW').value,0), psh=num(gi('psh').value,0), der=num(gi('panelDerate').value,0.6); const solarDayWh = Math.max(0,panelW)*Math.max(0,psh)*Math.max(0,Math.min(1,der))*(1-solarLoss);
+
+      // Laitteet / pv ja oma akkupooli
+      let devDay=0, ownPool=0; const sumBody=document.querySelector('#sumTable tbody'); sumBody.innerHTML='';
+      for(const d of devs){ const dLoss=clamp((d.loss??0)/100,0,0.5); devDay += d.whDay / (1 - lossGeneral) / (1 - dLoss); ownPool += Math.max(0,d.battWh||0); const tr=document.createElement('tr'); tr.innerHTML=`<td>${d.name}</td><td>${MODELS[d.cat]?MODELS[d.cat].label:'Oma'}</td><td>${d.profileLabel}</td><td>${d.whDay.toFixed(2)}</td><td>${(d.battWh||0).toFixed(1)}</td>`; sumBody.appendChild(tr); }
+
+      const netDay=Math.max(0, devDay - solarDayWh);
+
+      // Lähtö täysistä akuista?
+      let firstChargeDay='1', bankDays='–', daysOk; const startFull=gi('startFull').checked;
+      if(startFull && devDay>0){ const d0=ownPool / devDay; firstChargeDay = (d0>0)? (Math.ceil(d0)) : '1'; const dCover = Math.max(0, days - d0); daysOk = netDay>0 ? (d0 + bankWh / netDay) : Infinity; bankDays = netDay>0 ? (bankWh / netDay).toFixed(1) : '∞'; }
+      else { daysOk = netDay>0 ? (bankWh / netDay) : Infinity; firstChargeDay='1'; bankDays = netDay>0 ? (bankWh / netDay).toFixed(1) : '∞'; }
+
+      // Kuinka monta NB20000 vielä tarvitaan
+      let nbNeed='–'; if(netDay>0){ const needWh = Math.max(0, Math.max(0, days - (startFull? (ownPool/devDay) : 0)) * netDay - bankWh); const nbWh = BANKS.nb20000.Wh * (1 - (BANKS.nb20000.loss/100)) * tDer; const n = Math.ceil(needWh / nbWh); nbNeed = n>0 ? n : 0; } else { nbNeed = 0; }
+
+      // UI
+      gi('banksAvail').textContent = `${Math.round(bankWh)} Wh`;
+      gi('dayUse').textContent = `${Math.round(devDay)} Wh/pv`;
+      gi('solarDay').textContent = `${Math.round(solarDayWh)} Wh/pv`;
+      gi('daysOk').textContent = (daysOk===Infinity)?('∞ — Reissu: '+days+' pv') : (daysOk.toFixed(1)+' — Reissu: '+days+' pv');
+      const def = netDay>0 ? `−${Math.round(netDay)} Wh/pv` : `+${Math.round(-netDay)} Wh/pv`;
+      gi('deficit').textContent = def;
+      gi('nbNeed').textContent = `${nbNeed}`;
+      gi('ownPool').textContent = `${ownPool.toFixed(1)} Wh`;
+      gi('firstCharge').textContent = `${firstChargeDay}`;
+      gi('bankDays').textContent = `${bankDays}`;
+
+      gi('explain').textContent = `Lähtö täysistä akuista ${startFull?'KYLLÄ':'EI'}. Pankkien Wh lasketaan mAh→Wh (oletus 3.7 V) tai suoraan Wh:sta, sisäinen häviö ja lämpö huomioitu. Päiväkulutus sisältää yleishäviön (${(lossGeneral*100).toFixed(0)} %) ja laitekohtaisen häviön (oletus 0 %).`;
+    }
+
+    // INIT demo: NB20000 + iPhone(B) + 67i(B) + fēnix(B)
+    (function init(){ banks=[{name:'NB20000',Wh:74,count:1,loss:15}]; renderBanks(); devs=[{name:'iPhone 16 Pro',cat:'phone',profileLabel:MODELS.phone.profiles.B.label,whDay:MODELS.phone.profiles.B.wh,loss:0,battWh:12},{name:'Garmin GPSMAP 67i',cat:'gps',profileLabel:MODELS.gps.profiles.B.label,whDay:MODELS.gps.profiles.B.wh,loss:0,battWh:10},{name:'fēnix 7X Solar',cat:'watch',profileLabel:MODELS.watch.profiles.B.label,whDay:MODELS.watch.profiles.B.wh,loss:0,battWh:2}]; renderDevs(); })();
+
+    // EVENTS
+    gi('calc').addEventListener('click', compute);
+  </script>
+</body>
+</html>

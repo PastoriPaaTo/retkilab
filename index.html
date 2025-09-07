@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RetkiLab – työkalut</title>
+  <link rel="stylesheet" href="retkilab.css">
+</head>
+<body>
+  <header class="rl-header">
+    <h1>RetkiLab – laskurit</h1>
+    <nav>
+      <a href="profile.html" class="rl-btn">Profiili</a>
+      <a href="#" id="applyAll" class="rl-link">Täytä profiili tähän sivuun</a>
+    </nav>
+  </header>
+
+  <main class="rl-main">
+    <section class="rl-grid">
+      <!-- lisää/poista linkkejä sen mukaan mitä tiedostoja sinulla on -->
+      <a class="rl-card" href="reittiaika-ci.html">
+        <h2>Reittiaikalaskin+</h2><p>Naismith/Tobler + CI</p>
+      </a>
+      <a class="rl-card" href="500g-ci.html">
+        <h2>Rinkan kevennys</h2><p>0.5–X kg vaikutus + CI</p>
+      </a>
+      <a class="rl-card" href="layer-velho.html">
+        <h2>Layer-velho</h2><p>Rinkka-lämpö + IREQ</p>
+      </a>
+      <a class="rl-card" href="r-arvo-pinoaja.html">
+        <h2>R-arvo-pinoaja</h2><p>Lämpötase + auto-täyttö</p>
+      </a>
+      <a class="rl-card" href="polttoainelaskin.html">
+        <h2>Polttoainelaskin</h2><p>vesi/lumi + hyötysuhde</p>
+      </a>
+      <a class="rl-card" href="sahkobudjetti.html">
+        <h2>Sähköbudjetti</h2><p>pankit mAh/Wh + profiilit</p>
+      </a>
+      <a class="rl-card" href="kalori-makro-simu.html">
+        <h2>Kalori & makro</h2><p>ostoslista A/B + elektrolyytit</p>
+      </a>
+      <a class="rl-card" href="nesteytys-laskin.html">
+        <h2>Nesteytys</h2><p>vesi + Na mg/h</p>
+      </a>
+      <a class="rl-card" href="etenema-laskin.html">
+        <h2>Etenemä</h2><p>kuntoprofiilista km/pv & vko</p>
+      </a>
+    </section>
+  </main>
+
+  <footer class="rl-footer">
+    <small>RetkiLab © – yksinkertaiset työkalut vaeltajille</small>
+  </footer>
+
+  <script src="retkilab-profile.js"></script>
+  <script>
+    // tämä nappi testaa että profiili latautuu tälle sivulle (ei pakko)
+    document.getElementById('applyAll').addEventListener('click', (e)=>{
+      e.preventDefault();
+      window.RetkiLab && RetkiLab.applyProfile();
+      alert('Profiili luettu (jos kenttiä olisi tällä sivulla, ne täytettäisiin).');
+    });
+  </script>
+</body>
+</html>

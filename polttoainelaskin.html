@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Polttoainelaskin (release)</title>
+  <style>
+    :root{--bg:#0b0d10;--card:#12161b;--ink:#e9edf1;--muted:#9fb0c0;--accent:#4fd1c5}
+    *{box-sizing:border-box}body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto;background:var(--bg);color:var(--ink)}
+    header{padding:14px 18px;border-bottom:1px solid #1f2937;background:#0b0d10;position:sticky;top:0}
+    h1{font-size:18px;margin:0}
+    main{padding:18px;max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1.05fr .95fr;gap:16px}
+    @media (max-width:960px){main{grid-template-columns:1fr}}
+    .card{background:var(--card);border:1px solid #1f2937;border-radius:14px;padding:14px}
+    .section-title{font-size:13px;text-transform:uppercase;color:var(--muted);letter-spacing:.12em;margin:8px 0}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+    input,select{width:100%;background:#0e1217;color:var(--ink);border:1px solid #293241;border-radius:10px;padding:9px 10px;font-size:14px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .btn{background:var(--accent);color:#0b0d10;border:none;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+    .btn.secondary{background:#243141;color:var(--ink);border:1px solid #334155}
+    .muted{color:var(--muted);font-size:12px}
+    .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+    .kpi>div{background:#0f1320;border:1px solid #1f2a3c;border-radius:12px;padding:12px}
+    .kpi .label{color:var(--muted);font-size:12px}
+    .kpi .value{font-size:18px;font-weight:800}
+  </style>
+</head>
+<body>
+  <header><h1>Polttoainelaskin</h1></header>
+  <main>
+    <section class="card">
+      <div class="section-title">1) Keitin & kattila</div>
+      <div class="grid">
+        <div><label>Keitintyyppi</label>
+          <select id="stove"><option value="gas" selected>Kaasu</option><option value="alcohol">Alkoholi</option><option value="whitegas">Bensa/moni</option><option value="wood">Puu</option></select>
+        </div>
+        <div><label>Hyötysuhde (0.35–0.80)</label><input id="eff" type="text" value="0.55"></div>
+        <div>
+          <label>Lisäoptiot</label>
+          <div class="row"><label><input type="checkbox" id="hx"> HX‑kattila</label><label><input type="checkbox" id="lid" checked> Kansi</label><label><input type="checkbox" id="windshield" checked> Tuulisuoja</label></div>
+        </div>
+      </div>
+
+      <div class="section-title">2) Reissun parametrit</div>
+      <div class="grid">
+        <div><label>Päiviä</label><input id="days" type="text" value="5"></div>
+        <div><label>Korkeus (m)</label><input id="alt" type="text" value="300"></div>
+        <div><label>Vesimäärä / pv (L → kiehuvaksi)</label><input id="waterL" type="text" value="2.0"></div>
+        <div><label>Lähtöveden lämpö (°C)</label><input id="tStart" type="text" value="10"></div>
+        <div><label>Lumisulatus‑osuus</label>
+          <select id="snowFrac"><option value="0" selected>0 %</option><option value="0.25">25 %</option><option value="0.5">50 %</option><option value="0.75">75 %</option><option value="1">100 %</option></select>
+        </div>
+        <div><label>Lumen lämpö (°C)</label><input id="tSnow" type="text" value="-5"></div>
+      </div>
+
+      <div class="section-title">3) Haudutus / varmuus</div>
+      <div class="grid">
+        <div><label>Haudutusaika / pv (min)</label><input id="simmerMin" type="text" value="10"></div>
+        <div><label>Haudutus‑teho (W)</label><input id="simmerW" type="text" value="600"></div>
+        <div><label>Varmuusmarginaali</label>
+          <select id="reserve"><option value="0.2">+20 %</option><option value="0.25" selected>+25 %</option><option value="0.3">+30 %</option></select>
+        </div>
+      </div>
+
+      <div style="margin-top:10px" class="row">
+        <button id="calc" class="btn">Laske polttoaine</button>
+        <button class="btn secondary" id="preset1">Preset: Kesä, kaasu + HX</button>
+        <button class="btn secondary" id="preset2">Preset: Talvi, bensa + 100 % lumi</button>
+        <button class="btn secondary" id="preset3">Preset: Alkoholi minimalismi</button>
+      </div>
+      <div class="muted" style="margin-top:6px">Hyötysuhde on arvio. HX, kansi ja tuulisuoja parantavat tulosta. Varmuusmarginaali lisätään koko reissuun.</div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">Tulos</div>
+      <div class="kpi">
+        <div><div class="label">Päivän energia (kattilalle)</div><div class="value" id="qday">-</div></div>
+        <div><div class="label">Polttoainetta / pv</div><div class="value" id="fuelDay">-</div></div>
+        <div><div class="label">Yhteensä (sis. varmuus)</div><div class="value" id="fuelTrip">-</div></div>
+      </div>
+      <div class="kpi" id="canInfo" style="display:none">
+        <div><div class="label">Suositus (kaasu)</div><div class="value" id="canSuggest">-</div></div>
+        <div><div class="label">Vaihtoehto</div><div class="value" id="canAlt">-</div></div>
+        <div><div class="label">Hyötysuhde (näytettävä)</div><div class="value" id="effShown">-</div></div>
+      </div>
+      <div style="margin-top:10px"><div class="section-title">Miksi näin?</div><div id="explain" class="muted">-</div></div>
+    </section>
+  </main>
+
+  <script>
+    const $=(id)=>document.getElementById(id);
+    const num=(v)=>{const s=String(v??'').trim().replace(/\s+/g,'').replace('−','-').replace(',','.');if(s==='')return NaN; const x=parseFloat(s); return Number.isFinite(x)?x:NaN};
+    const clamp=(v,mi,ma)=>Math.min(ma,Math.max(mi,v));
+
+    // Energiat
+    const HHV={ gas:46, alcohol:22, whitegas:46, wood:16 }; // kJ/g
+    const DENS={ alcohol:0.79, whitegas:0.74 };// g/ml
+
+    const defaultEff=(st)=>({gas:0.55,alcohol:0.35,whitegas:0.55,wood:0.45}[st]||0.5);
+    const TboilC=(alt)=>Math.max(80, 100 - 0.003*alt);
+
+    function compute(){
+      const stove=$('stove').value; let eff=num($('eff').value); if(!Number.isFinite(eff)) eff=defaultEff(stove);
+      if($('hx').checked) eff+=0.12; if($('lid').checked) eff+=0.05; if($('windshield').checked) eff+=0.05; eff=clamp(eff,0.35,0.80);
+
+      const days=num($('days').value); const alt=num($('alt').value); const waterL=num($('waterL').value); const tStart=num($('tStart').value);
+      const snowFrac=num($('snowFrac').value); const tSnow=num($('tSnow').value); const simmerMin=num($('simmerMin').value); const simmerW=num($('simmerW').value); const reserve=num($('reserve').value);
+      if(![days,alt,waterL,tStart,snowFrac,tSnow,simmerMin,simmerW,reserve].every(Number.isFinite)){ alert('Tarkista syötteet'); return }
+
+      const Tboil=TboilC(alt);
+      const snowL=clamp(waterL*snowFrac,0,Math.max(0,waterL)); const liquidL=Math.max(0,waterL-snowL);
+      const Q_liquid=liquidL*4.186*Math.max(0,Tboil-tStart); // kJ
+      const Q_snow=snowL*(2.1*Math.max(0,0-tSnow) + 334 + 4.186*Math.max(0,Tboil-0)); // kJ
+      const Q_simmer=Math.max(0,simmerW)*Math.max(0,simmerMin)/60*3.6; // kJ
+      const Q_pot_day=Q_liquid+Q_snow+Q_simmer; const Q_fuel_day=Q_pot_day/eff;
+
+      const hhv=HHV[stove]; let fuel_g_day=(stove==='wood')?0:(Q_fuel_day/hhv); let fuel_g_trip=fuel_g_day*days*(1+reserve);
+
+      $('qday').textContent=`${Math.round(Q_pot_day)} kJ`;
+      $('fuelDay').textContent=(stove==='wood')?'0 g (puu kerätään laillisesti)':`${Math.round(fuel_g_day)} g`;
+
+      let tripStr=''; if(stove==='alcohol'){ tripStr=`${Math.round(fuel_g_trip)} g ≈ ${Math.round(fuel_g_trip/DENS.alcohol)} ml`; }
+      else if(stove==='whitegas'){ tripStr=`${Math.round(fuel_g_trip)} g ≈ ${Math.round(fuel_g_trip/DENS.whitegas)} ml`; }
+      else if(stove==='gas'){ tripStr=`${Math.round(fuel_g_trip)} g`; } else { tripStr='0 g (puu)'; }
+      $('fuelTrip').textContent=tripStr;
+
+      const can=$('canInfo'); if(stove==='gas'){ can.style.display='grid'; const need=fuel_g_trip; const cans=[110,230,450]; let pick=cans.find(c=>need<=c)||`${Math.ceil(need/450)} × 450 g`; $('canSuggest').textContent=(typeof pick==='number')?`${pick} g kanu`:pick; $('canAlt').textContent=(typeof pick==='number'&&pick>110)?'2 × 110 g vaihtoehtona':'230 g on yleisin'; $('effShown').textContent=`${(eff*100).toFixed(0)} %`; } else { can.style.display='none' }
+
+      $('explain').textContent=`Kiehumispiste ~${Tboil.toFixed(1)} °C @ ${Math.round(alt)} m. Vesi: ${liquidL.toFixed(2)} L, lumi: ${snowL.toFixed(2)} L. Haudutus: ${Math.round(simmerW)} W × ${Math.round(simmerMin)} min/pv. Varmuus ${(reserve*100).toFixed(0)} %.`
+    }
+
+    // Presetit
+    $('preset1').addEventListener('click',()=>{ $('stove').value='gas'; $('eff').value='0.55'; $('hx').checked=true; $('lid').checked=true; $('windshield').checked=true; $('days').value='4'; $('alt').value='200'; $('waterL').value='2.0'; $('tStart').value='12'; $('snowFrac').value='0'; $('tSnow').value='-5'; $('simmerMin').value='8'; $('simmerW').value='500'; $('reserve').value='0.25'; });
+    $('preset2').addEventListener('click',()=>{ $('stove').value='whitegas'; $('eff').value='0.55'; $('hx').checked=true; $('lid').checked=true; $('windshield').checked=true; $('days').value='6'; $('alt').value='350'; $('waterL').value='3.0'; $('tStart').value='0'; $('snowFrac').value='1'; $('tSnow').value='-8'; $('simmerMin').value='15'; $('simmerW').value='700'; $('reserve').value='0.3'; });
+    $('preset3').addEventListener('click',()=>{ $('stove').value='alcohol'; $('eff').value='0.35'; $('hx').checked=false; $('lid').checked=true; $('windshield').checked=true; $('days').value='3'; $('alt').value='50'; $('waterL').value='1.2'; $('tStart').value='15'; $('snowFrac').value='0'; $('tSnow').value='-5'; $('simmerMin').value='0'; $('simmerW').value='300'; $('reserve').value='0.2'; });
+
+    // Vaihda keitintyyppi → järkevä oletus
+    $('stove').addEventListener('change',()=>{ const st=$('stove').value; $('eff').value=String(defaultEff(st)); $('simmerW').value=(st==='gas')?600:(st==='whitegas')?700:(st==='alcohol')?300:0; });
+
+    $('calc').addEventListener('click', compute);
+    // Ei autolaskentaa → nopea käytössä
+  </script>
+</body>
+</html>

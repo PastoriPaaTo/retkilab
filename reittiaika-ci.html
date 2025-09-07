@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reittiaikalaskin+ (CI, Pandolf + Tobler)</title>
+  <style>
+    :root{--bg:#0b0d10;--card:#12161b;--ink:#e9edf1;--muted:#9fb0c0;--accent:#4fd1c5;--bad:#ff6b6b}
+    *{box-sizing:border-box}body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto;background:var(--bg);color:var(--ink)}
+    header{padding:14px 18px;border-bottom:1px solid #1f2937;background:#0b0d10;position:sticky;top:0}
+    h1{font-size:18px;margin:0}
+    main{padding:18px;max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1.05fr .95fr;gap:16px}
+    @media (max-width:960px){main{grid-template-columns:1fr}}
+    .card{background:var(--card);border:1px solid #1f2937;border-radius:14px;padding:14px}
+    .section-title{font-size:13px;text-transform:uppercase;color:var(--muted);letter-spacing:.12em;margin:8px 0}
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+    input,select{width:100%;background:#0e1217;color:var(--ink);border:1px solid #293241;border-radius:10px;padding:9px 10px;font-size:14px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .btn{background:var(--accent);color:#0b0d10;border:none;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+    .btn.secondary{background:#243141;color:var(--ink);border:1px solid #334155}
+    .muted{color:var(--muted);font-size:12px}
+    .kpi{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}
+    .kpi>div{background:#0f1320;border:1px solid #1f2a3c;border-radius:12px;padding:12px}
+    .kpi .label{color:var(--muted);font-size:12px}
+    .kpi .value{font-size:18px;font-weight:800}
+  </style>
+</head>
+<body>
+  <header><h1>Reittiaikalaskin+ (Comfort Index, tieteelliset mallit)</h1></header>
+  <main>
+    <section class="card">
+      <div class="section-title">1) Reitti</div>
+      <div class="grid">
+        <div><label>Matka (km)</label><input id="distance_km" type="text" value="18"></div>
+        <div><label>Nousua (m)</label><input id="ascent_m" type="text" value="600"></div>
+        <div><label>Laskua (m) <span class="muted">(valinn.)</span></label><input id="descent_m" type="text" value="600"></div>
+        <div><label>Tasamaan oma vauhti (km/h)</label><input id="flat_speed" type="text" value="5.0"></div>
+      </div>
+
+      <div class="section-title">2) Sinä & reppu</div>
+      <div class="grid">
+        <div><label>Oma paino (kg)</label><input id="body_kg" type="text" value="100"></div>
+        <div><label>Repun paino (kg)</label><input id="pack_kg" type="text" value="12"></div>
+        <div><label>Ikä</label><input id="age" type="text" value="45"></div>
+        <div><label>Kuntotaso</label>
+          <select id="fitness"><option value="weak">Heikko</option><option value="normal" selected>Normaali</option><option value="good">Hyvä</option></select>
+        </div>
+      </div>
+
+      <div class="section-title">3) Maasto & lumi (nopeusmalli)</div>
+      <div class="grid">
+        <div><label>Maasto</label>
+          <select id="terrain"><option value="trail" selected>Polku</option><option value="fell">Tunturipaljakka</option><option value="bog">Suo</option><option value="rock">Kivikko</option></select>
+        </div>
+        <div><label>Lumi</label>
+          <select id="snow"><option value="none" selected>Ei</option><option value="thin">Ohut (≤5 cm)</option><option value="mid">5–20 cm</option><option value="deep">Syvä (>20 cm)</option></select>
+        </div>
+      </div>
+
+      <div class="section-title">4) Sää</div>
+      <div class="grid-3">
+        <div><label>Lämpötila (°C)</label><input id="tempC" type="text" value="10"></div>
+        <div><label>Tuuli (m/s)</label><input id="wind" type="text" value="4"></div>
+        <div><label>Sade</label>
+          <select id="precip"><option value="dry" selected>Kuiva</option><option value="drizzle">Tihku</option><option value="rain">Sade</option></select>
+        </div>
+        <div><label>Altistus</label>
+          <select id="exposure"><option value="forest">Metsä</option><option value="open" selected>Avoin</option></select>
+        </div>
+      </div>
+
+      <div class="section-title">5) Tauot</div>
+      <div class="grid">
+        <div><label>Pienet tauot (min / liikkumistunti)</label><input id="short_break" type="text" value="8"></div>
+        <div><label>Pitkät tauot yhteensä (min)</label><input id="long_breaks" type="text" value="30"></div>
+      </div>
+
+      <div class="section-title">6) Mukavuus (MET / CI)</div>
+      <div class="grid-3">
+        <div><label>Maasto (raskaus, η)</label>
+          <select id="eta"><option value="1.0">Tie (1.0)</option><option value="1.1">Kova polku (1.1)</option><option value="1.2" selected>Ruoho/humus (1.2)</option><option value="1.3">Kivikko (1.3)</option><option value="1.5">Tiheä metsä (1.5)</option><option value="1.6">Kova lumi (1.6)</option><option value="1.8">Suo (1.8)</option><option value="2.1">Hiekka (2.1)</option></select>
+        </div>
+        <div><label>Kalibroi malli (±%)</label>
+          <input id="cal" type="range" min="-15" max="15" step="1" value="0" oninput="calLbl.textContent=this.value+'%';"><div class="muted">Kalibrointi: <span id="calLbl">0%</span></div>
+        </div>
+        <div><label>Mukavuusraja (MET)</label>
+          <div class="row"><input id="metTarget" type="text" value="5.5"><label><input type="checkbox" id="limitMet"> Rajoita nopeus</label></div>
+        </div>
+      </div>
+
+      <div class="section-title">7) Nopeusmalli</div>
+      <div class="row">
+        <label><input type="checkbox" id="useTobler"> Käytä Toblerin käyrää (kaltevuus → nopeus)</label>
+      </div>
+
+      <div style="margin-top:10px" class="row">
+        <button id="calc" class="btn">Laske</button>
+        <button class="btn secondary" id="preset1">Preset: Lappi</button>
+        <button class="btn secondary" id="preset2">Preset: Paljakka + tuuli</button>
+        <button class="btn secondary" id="preset3">Preset: Sade</button>
+      </div>
+      <div class="muted" style="margin-top:6px">Mallit: Naismith (perus), Tobler (kaltevuus), Pandolf–Santee (MET kuormalla ja maastolla), Soule–Goldman η.</div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">Tulos</div>
+      <div class="kpi">
+        <div><div class="label">Liikkumisaika</div><div class="value" id="moving">-</div></div>
+        <div><div class="label">Kokonaistimeineen</div><div class="value" id="total">-</div></div>
+        <div><div class="label">Keskinopeus</div><div class="value" id="avgspeed">-</div></div>
+        <div><div class="label">Energia‑arvio</div><div class="value" id="kcal">-</div></div>
+      </div>
+      <div class="kpi">
+        <div><div class="label">MET (calibr.)</div><div class="value" id="metVal">-</div></div>
+        <div><div class="label">CI (0–10) / sRPE</div><div class="value" id="ciVal">-</div></div>
+      </div>
+      <div class="kpi" id="limitRow" style="display:none">
+        <div><div class="label">Mukavuusrajoitettu liikkumisaika</div><div class="value" id="movingLim">-</div></div>
+        <div><div class="label">Mukavuusrajoitettu keskinopeus</div><div class="value" id="speedLim">-</div></div>
+      </div>
+      <div style="margin-top:10px"><div class="section-title">Miksi näin?</div><div id="explain"></div></div>
+    </section>
+  </main>
+
+  <script>
+    const gi=(id)=>document.getElementById(id);
+    const num=(v,def=0)=>{const s=String(v??'').trim().replace(/\s+/g,'').replace('−','-').replace(',','.');const x=parseFloat(s);return Number.isFinite(x)?x:def};
+    const clamp=(v,mi,ma)=>Math.min(ma,Math.max(mi,v));
+    const hms=(h)=>{const H=Math.floor(h),M=Math.round((h-H)*60);return `${H} h ${String(M).padStart(2,'0')} min`};
+
+    // Naismith + kertoimet
+    function timeBase(distance_km, ascent_m, flat_speed){ return (distance_km/flat_speed) + (ascent_m/600); }
+
+    // Tobler speed (km/h) for grade s (rise/run), implemented with average grade only
+    function toblerSpeed(avgGrade){ return 6*Math.exp(-3.5*Math.abs(avgGrade+0.05)); }
+
+    // Energy helpers
+    const terrainEfMap={trail:1.00,fell:1.10,bog:1.30,rock:1.35};
+    const terrainSpeedMap={trail:1.00,fell:0.92,bog:0.75,rock:0.70};
+
+    // Pandolf / MET / CI
+    const pandolfWatts=(W,L,V_kmh,G,eta)=>{const V=V_kmh/3.6;return 1.5*W + 2.0*(W+L)*Math.pow(L/W,2) + eta*(W+L)*(1.5*V*V + 0.35*V*G)};
+    const wattsToMET=(P,kg)=> (P*0.86)/kg;
+    const CIfromMET=(m)=>{const a=4.5,b=8.0; if(m<=a) return 10; if(m>=b) return 0; return Math.max(0,Math.min(10,10-(m-a)*(10/(b-a))))};
+    const sRPEfromMET=(m)=>{const pts=[[3,3],[4.5,4.5],[6,6],[7.5,8.5],[9,9.5]]; if(m<=pts[0][0])return pts[0][1]; for(let i=1;i<pts.length;i++){if(m<=pts[i][0]){const[x0,y0]=pts[i-1],[x1,y1]=pts[i];const t=(m-x0)/(x1-x0);return y0+t*(y1-y0)}} return pts.at(-1)[1]};
+    function solveSpeedForMET(W,L,G,eta,metTarget,cal){let lo=0.5,hi=8.0;for(let i=0;i<28;i++){const mid=(lo+hi)/2;let MET=wattsToMET(pandolfWatts(W,L,mid,G,eta),W);MET*=(1+cal); if(MET>metTarget) hi=mid; else lo=mid;}return lo}
+
+    function compute(){
+      const p={
+        distance_km:num(gi('distance_km').value,0),ascent_m:num(gi('ascent_m').value,0),descent_m:num(gi('descent_m').value,0),
+        flat_speed:clamp(num(gi('flat_speed').value,5),2,8), body_kg:clamp(num(gi('body_kg').value,75),20,200),
+        pack_kg:clamp(num(gi('pack_kg').value,0),0,60), age:clamp(num(gi('age').value,35),10,90), fitness:gi('fitness').value,
+        terrain:gi('terrain').value, snow:gi('snow').value, tempC:num(gi('tempC').value,10), wind:clamp(num(gi('wind').value,0),0,40),
+        precip:gi('precip').value, exposure:gi('exposure').value, short_break:clamp(num(gi('short_break').value,0),0,30), long_breaks:clamp(num(gi('long_breaks').value,0),0,600)
+      };
+
+      // speed multipliers (improved pack model: nonlinear)
+      const pack_ratio=p.pack_kg/Math.max(1,p.body_kg);
+      const f_pack = 1/(1 + 1.1*Math.pow(pack_ratio,1.3)); // tieteellisempi muoto
+      const f_terrain = terrainSpeedMap[p.terrain]||1.0;
+      const f_snow = ({none:1.00,thin:0.90,mid:0.70,deep:0.45}[p.snow]||1.0);
+      let f_wind=(p.exposure==='open')?(1-Math.max(0,p.wind-5)*0.03):(1-Math.max(0,p.wind-8)*0.02); f_wind=clamp(f_wind,0.7,1.0);
+      const f_precip = ({dry:1.00,drizzle:0.97,rain:0.92}[p.precip]||1.0);
+      const f_heat = p.tempC>25?clamp(1-0.02*(p.tempC-25),0.8,1.0):1.0;
+      const f_fitness = ({weak:0.90,normal:1.00,good:1.08}[p.fitness]||1.0);
+      const f_age = clamp(1-0.003*Math.max(0,p.age-35),0.9,1.0);
+      const f_total = f_pack*f_terrain*f_snow*f_wind*f_precip*f_heat*f_fitness*f_age;
+
+      // Base time model: Naismith OR Tobler
+      let t_move_base = timeBase(p.distance_km,p.ascent_m,p.flat_speed);
+      if(gi('useTobler').checked){
+        const avgGrade = p.distance_km>0 ? (p.ascent_m/(p.distance_km*1000)) : 0; // rise/run
+        const v_tob = toblerSpeed(avgGrade); // km/h
+        const v_base = v_tob * (p.flat_speed/6); // skaalataan omaan tasamaa-vauhtiin
+        t_move_base = p.distance_km/Math.max(0.01,v_base);
+      }
+
+      const t_moving = t_move_base*(1/Math.max(0.05,f_total));
+      const t_total = t_moving + (p.short_break/60)*t_moving + (p.long_breaks/60);
+      const v_avg = p.distance_km/Math.max(0.0001,t_moving);
+
+      const mass=p.body_kg+p.pack_kg; const terrainEf=terrainEfMap[p.terrain]||1.0;
+      const E_flat=1.0*mass*p.distance_km*terrainEf; const E_vert=4*((mass*9.81*p.ascent_m)/4186);
+      const kcal=E_flat+E_vert;
+
+      // Comfort (Pandolf)
+      const eta=parseFloat(gi('eta').value); const cal=parseFloat(gi('cal').value)/100; const metTarget=num(gi('metTarget').value,5.5); const limit=gi('limitMet').checked;
+      const grade=Math.max(0,(p.ascent_m/Math.max(1,p.distance_km*1000))*100);
+      let MET = wattsToMET(pandolfWatts(p.body_kg,p.pack_kg,v_avg,grade,eta),p.body_kg)*(1+cal);
+      const CI = CIfromMET(MET); const sRPE = sRPEfromMET(MET);
+
+      // UI
+      gi('moving').textContent=hms(t_moving);
+      gi('total').textContent=hms(t_total);
+      gi('avgspeed').textContent=`${v_avg.toFixed(2)} km/h`;
+      gi('kcal').textContent=`${Math.round(kcal)} kcal`;
+      gi('metVal').textContent=`${MET.toFixed(1)} MET`;
+      gi('ciVal').textContent=`${CI.toFixed(1)} / sRPE ${sRPE.toFixed(1)}`;
+
+      if(limit && p.distance_km>0){
+        const v_lim=solveSpeedForMET(p.body_kg,p.pack_kg,grade,eta,metTarget,cal);
+        gi('movingLim').textContent=hms(p.distance_km/Math.max(0.01,v_lim));
+        gi('speedLim').textContent=`${v_lim.toFixed(2)} km/h`;
+        gi('limitRow').style.display='grid';
+      } else gi('limitRow').style.display='none';
+
+      gi('explain').innerHTML=[
+        `Perus (Naismith) tai Tobler (kaltevuus) → liikkumisaika.`,
+        `Repun vaikutus ei‑lineaarinen: 1/(1+1.1·(L/W)^1.3). Maasto/lumi/tuuli/sade/kunto/ikä skaalavat nopeutta.`,
+        `Comfort: Pandolf–Santee (kuorma ${p.pack_kg} kg, kaltevuus ~${grade.toFixed(1)}%, η ${eta}) → MET/CI. Kalibrointi ${(cal*100).toFixed(0)} %.`,
+      ].join('<br>');
+    }
+
+    // Presets
+    gi('preset1').addEventListener('click',()=>{gi('distance_km').value='18';gi('ascent_m').value='500';gi('flat_speed').value='5.0';gi('terrain').value='trail';gi('snow').value='none';gi('tempC').value='8';gi('wind').value='4';gi('precip').value='dry';gi('exposure').value='forest';gi('eta').value='1.2';gi('cal').value=0;gi('metTarget').value='5.5';gi('limitMet').checked=false;gi('useTobler').checked=false;});
+    gi('preset2').addEventListener('click',()=>{gi('distance_km').value='22';gi('ascent_m').value='700';gi('flat_speed').value='5.0';gi('terrain').value='fell';gi('snow').value='none';gi('tempC').value='5';gi('wind').value='10';gi('precip').value='drizzle';gi('exposure').value='open';gi('eta').value='1.3';gi('cal').value=5;gi('metTarget').value='5.5';gi('limitMet').checked=true;gi('useTobler').checked=true;});
+    gi('preset3').addEventListener('click',()=>{gi('distance_km').value='15';gi('ascent_m').value='400';gi('flat_speed').value='4.8';gi('terrain').value='trail';gi('snow').value='none';gi('tempC').value='12';gi('wind').value='6';gi('precip').value='rain';gi('exposure').value='forest';gi('eta').value='1.2';gi('cal').value=-5;gi('metTarget').value='5.5';gi('limitMet').checked=false;gi('useTobler').checked=false;});
+
+    gi('calc').addEventListener('click', compute);
+  </script>
+  <script src="retkilab-profile.js"></script>
+</body>
+</html>
